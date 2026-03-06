@@ -3,15 +3,15 @@
 
 <head>
 <meta charset="UTF-8">
-<title>Agenda de Turnos - Lic. Florencia Rosales</title>
+<title>Turnos - Lic. Florencia Rosales</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 
 body{
 font-family:Arial;
-background:#f5f5f5;
+background:#f2f2f2;
 text-align:center;
 padding:40px;
 }
@@ -27,17 +27,16 @@ box-shadow:0 0 10px rgba(0,0,0,0.1);
 
 input,select{
 padding:10px;
+margin:8px;
 width:80%;
-margin:5px;
 }
 
 button{
 padding:10px 15px;
-margin:5px;
 border:none;
-border-radius:6px;
 background:#4CAF50;
 color:white;
+border-radius:6px;
 cursor:pointer;
 }
 
@@ -47,8 +46,8 @@ background:gray;
 
 .admin{
 margin-top:40px;
-padding:20px;
-border-top:1px solid #ddd;
+padding-top:20px;
+border-top:1px solid #ccc;
 }
 
 </style>
@@ -62,8 +61,8 @@ border-top:1px solid #ddd;
 <h1>Turnos - Lic. Florencia Rosales</h1>
 
 <p>
-Dirección consultorio presencial:<br>
-<b>153 e 518 y 519 – Melchor Romero, La Plata</b>
+Consultorio presencial<br>
+<b>153 e 518 y 519 – Melchor Romero – La Plata</b>
 </p>
 
 <h2>Reservar turno</h2>
@@ -73,7 +72,8 @@ Dirección consultorio presencial:<br>
 
 <select id="slot"></select>
 
-<br>
+<br><br>
+
 <button onclick="reservar()">Reservar turno</button>
 
 <p id="msg"></p>
@@ -82,10 +82,10 @@ Dirección consultorio presencial:<br>
 
 <h2>Panel administrador</h2>
 
-<input id="adminpass" type="password" placeholder="Contraseña admin">
+<input id="adminpass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
 
-<div id="adminpanel" style="display:none">
+<div id="panel" style="display:none">
 
 <h3>Turnos reservados</h3>
 
@@ -99,7 +99,7 @@ Dirección consultorio presencial:<br>
 
 <script>
 
-const supabaseClient = supabase.createClient(
+const supabase = supabase.createClient(
 "https://yodefzidtoluudozgces.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZGVmemlkdG9sdXVkb3pnY2VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDEwOTUsImV4cCI6MjA4ODM3NzA5NX0.ZiHokkUpT7s1CebAl9roYGj39mN5r8lu17dz2gmrFCU"
 )
@@ -127,17 +127,16 @@ horarios.forEach(h=>{
 let o=document.createElement("option")
 o.value=h
 o.innerText=h
+
 select.appendChild(o)
 
 })
 
 async function cargar(){
 
-const {data,error}=await supabaseClient
+const {data}=await supabase
 .from("appointments")
 .select("*")
-
-if(data){
 
 data.forEach(t=>{
 
@@ -146,8 +145,6 @@ let opt=[...select.options].find(o=>o.value===t.appointment_time)
 if(opt) opt.disabled=true
 
 })
-
-}
 
 }
 
@@ -164,7 +161,7 @@ return
 
 }
 
-let {error}=await supabaseClient
+let {error}=await supabase
 .from("appointments")
 .insert({
 name:name,
@@ -174,7 +171,7 @@ appointment_time:slot
 
 if(error){
 
-document.getElementById("msg").innerText="Turno ya reservado"
+document.getElementById("msg").innerText="Ese turno ya fue reservado"
 
 }else{
 
@@ -192,7 +189,7 @@ let pass=document.getElementById("adminpass").value
 
 if(pass===ADMIN_PASS){
 
-document.getElementById("adminpanel").style.display="block"
+document.getElementById("panel").style.display="block"
 
 cargarAdmin()
 
@@ -206,7 +203,7 @@ alert("Contraseña incorrecta")
 
 async function cargarAdmin(){
 
-const {data}=await supabaseClient
+const {data}=await supabase
 .from("appointments")
 .select("*")
 
@@ -219,6 +216,7 @@ data.forEach(t=>{
 let li=document.createElement("li")
 
 li.innerHTML=t.appointment_time+" - "+t.name+
+
 " <button onclick='cancelar(\""+t.id+"\")'>Cancelar</button>"
 
 lista.appendChild(li)
@@ -229,7 +227,7 @@ lista.appendChild(li)
 
 async function cancelar(id){
 
-await supabaseClient
+await supabase
 .from("appointments")
 .delete()
 .eq("id",id)
