@@ -1,174 +1,969 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Turnos – Lic. Florencia Rosales</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lic. Florencia Rosales | Psicología</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<style>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: #f5f3f0;
+      color: #2c2c2c;
+    }
+    .serif { font-family: 'Cormorant Garamond', serif; }
+    .handwritten {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+    .text-beige-dark { color: #8b8378; }
+    .bg-beige-light { background-color: #f5f3f0; }
+    .border-beige { border-color: #d4cfc7; }
+    .shadow-soft { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); }
 
-body{
-font-family: Arial, sans-serif;
-background: linear-gradient(135deg,#e9f0f7,#f5f7fb);
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-margin:0;
-}
+    .leaf-shadow { position: relative; overflow: hidden; }
+    .leaf-shadow::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 50 Q30 20 50 0 Q70 20 50 50" fill="none" stroke="%23d4cfc7" stroke-width="0.5" opacity="0.3"/></svg>') repeat;
+      opacity: 0.4;
+      pointer-events: none;
+    }
 
-.container{
-background:white;
-padding:40px;
-border-radius:12px;
-width:420px;
-box-shadow:0 10px 25px rgba(0,0,0,0.1);
-text-align:center;
-}
+    .calendar-day { transition: all 0.3s ease; }
+    .calendar-day:hover:not(.disabled):not(.empty) { background-color: #e8e4df; transform: scale(1.05); }
+    .calendar-day.selected { background-color: #2c2c2c; color: #f5f3f0; }
+    .calendar-day.disabled { color: #d4cfc7; cursor: not-allowed; }
+    .calendar-day.booked { background-color: #fee2e2; color: #991b1b; cursor: not-allowed; text-decoration: line-through; }
 
-h1{
-margin-bottom:10px;
-}
+    .time-slot { transition: all 0.2s ease; }
+    .time-slot:hover:not(.disabled):not(.booked) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .time-slot.selected { background-color: #2c2c2c; color: #f5f3f0; border-color: #2c2c2c; }
+    .time-slot.disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+    .time-slot.booked { background-color: #fee2e2; color: #991b1b; cursor: not-allowed; text-decoration: line-through; border-color: #fecaca; }
 
-.subtitle{
-color:#666;
-font-size:14px;
-margin-bottom:25px;
-}
+    .modalidad-btn { transition: all 0.3s ease; }
+    .modalidad-btn.selected { background-color: #2c2c2c; color: #f5f3f0; border-color: #2c2c2c; }
 
-input,select{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:1px solid #ccc;
-}
+    .smooth-transition { transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 
-button{
-margin-top:15px;
-padding:12px;
-width:100%;
-background:#3a8d4f;
-border:none;
-color:white;
-font-size:16px;
-border-radius:8px;
-cursor:pointer;
-}
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
 
-button:hover{
-background:#2f7441;
-}
+    .step-indicator { transition: all 0.3s ease; }
+    .step-indicator.active { background-color: #2c2c2c; color: #f5f3f0; }
+    .step-indicator.completed { background-color: #8b8378; color: #f5f3f0; }
 
-.admin{
-margin-top:30px;
-padding-top:20px;
-border-top:1px solid #ddd;
-}
+    .input-elegant {
+      background-color: transparent;
+      border: 1px solid #d4cfc7;
+      transition: all 0.3s ease;
+    }
+    .input-elegant:focus {
+      border-color: #2c2c2c;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(44,44,44,0.1);
+    }
 
-</style>
+    /* Admin panel styles */
+    .admin-panel {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+    }
+    .appointment-card {
+      background: #f9f9f9;
+      border-left: 4px solid #2c2c2c;
+      transition: all 0.3s ease;
+    }
+    .appointment-card:hover {
+      transform: translateX(5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+  </style>
 </head>
+<body class="antialiased">
 
-<body>
+  <!-- NAV -->
+  <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-beige">
+    <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="flex justify-between items-center">
+        <div class="text-center">
+          <h1 class="handwritten text-3xl text-gray-800">Florencia Rosales</h1>
+          <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
+        </div>
+        <div class="hidden md:flex items-center space-x-8 text-sm uppercase tracking-wider">
+          <a href="#inicio" class="hover:text-beige-dark smooth-transition">Inicio</a>
+          <a href="#agenda" class="px-6 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 smooth-transition">Agendar Turno</a>
+          <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800">
+            <i class="fas fa-lock"></i> Admin
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-<div class="container">
+  <!-- HERO -->
+  <section id="inicio" class="pt-32 pb-20 px-6 leaf-shadow">
+    <div class="max-w-4xl mx-auto text-center animate-fade-in">
+      <h2 class="handwritten text-5xl md:text-6xl text-gray-800 mb-4 mt-6">Florencia Rosales</h2>
+      <p class="text-lg uppercase tracking-[0.2em] text-beige-dark mb-2">Licenciada en Psicología</p>
+      <p class="text-2xl font-light text-gray-600 mb-8">MP 057074</p>
 
-<h1>Turnos - Lic. Florencia Rosales</h1>
+      <div class="inline-block px-8 py-4 bg-white rounded-full shadow-soft mb-12">
+        <p class="serif text-2xl text-gray-800 tracking-wide">Agenda Abierta</p>
+      </div>
 
-<div class="subtitle">
-Consultorio presencial<br>
-153 e 518 y 519 – Melchor Romero – La Plata
-</div>
+      <p class="text-gray-600 max-w-2xl mx-auto leading-relaxed mb-12 text-lg">
+        Atención personalizada para niños, adolescentes y adultos.
+        Un espacio seguro donde podrás explorar tus emociones y trabajar en tu bienestar.
+      </p>
 
-<h3>Reservar turno</h3>
+      <div class="flex flex-col md:flex-row justify-center gap-6">
+        <a href="#agenda" class="px-8 py-4 bg-gray-800 text-white rounded-full hover:bg-gray-700 smooth-transition shadow-lg">
+          <i class="far fa-calendar-alt mr-2"></i> Reservar Turno
+        </a>
+        <a href="mailto:FlorPsico@outlook.es" class="px-8 py-4 border-2 border-gray-800 text-gray-800 rounded-full hover:bg-gray-800 hover:text-white smooth-transition">
+          <i class="far fa-envelope mr-2"></i> Contactar
+        </a>
+      </div>
+    </div>
+  </section>
 
-<input id="name" placeholder="Nombre completo">
+  <!-- MODALIDADES -->
+  <section class="py-20 bg-white">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="grid md:grid-cols-2 gap-12">
+        <div class="bg-beige-light p-8 rounded-2xl border border-beige text-center">
+          <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-white flex items-center justify-center text-2xl text-gray-800 shadow-sm">
+            <i class="fas fa-building"></i>
+          </div>
+          <h3 class="serif text-2xl text-gray-800 mb-2">Modalidad Presencial</h3>
+          <p class="text-beige-dark mb-4 text-sm uppercase tracking-wider">Consultorio</p>
+          <p class="text-gray-700 text-sm leading-relaxed">
+            153 e 518 y 519, La Plata, Melchor Romero
+          </p>
+        </div>
 
-<input id="email" placeholder="Email">
+        <div class="bg-gray-800 text-white p-8 rounded-2xl text-center shadow-soft">
+          <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center text-2xl">
+            <i class="fas fa-video"></i>
+          </div>
+          <h3 class="serif text-2xl mb-2">Modalidad Virtual</h3>
+          <p class="text-gray-300 text-sm leading-relaxed">
+            Atención online por videollamada.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<select id="time">
-<option value="">Elegir horario</option>
-<option>16:00</option>
-<option>17:00</option>
-<option>18:00</option>
-<option>19:00</option>
-</select>
+  <!-- BOOKING SECTION -->
+  <section id="agenda" class="py-20 bg-beige-light">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h3 class="handwritten text-4xl text-gray-800 mb-4">Reserva tu Consulta</h3>
+        <p class="text-gray-600">Selecciona la modalidad y el horario disponible</p>
+      </div>
 
-<button onclick="reservar()">Reservar turno</button>
+      <!-- PROGRESS -->
+      <div class="flex justify-center items-center mb-12 max-w-md mx-auto">
+        <div class="flex items-center w-full">
+          <div class="step-indicator active w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center text-sm font-semibold" id="step1-ind">1</div>
+          <div class="flex-1 h-px bg-gray-300 mx-2" id="line1"></div>
+          <div class="step-indicator w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center text-sm font-semibold text-gray-400" id="step2-ind">2</div>
+          <div class="flex-1 h-px bg-gray-300 mx-2" id="line2"></div>
+          <div class="step-indicator w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center text-sm font-semibold text-gray-400" id="step3-ind">3</div>
+        </div>
+      </div>
 
-<div class="admin">
+      <!-- STEP 1: MODALIDAD -->
+      <div id="step1" class="bg-white rounded-3xl shadow-soft p-8 md:p-12">
+        <h4 class="serif text-2xl text-gray-800 mb-8 text-center">¿Cómo querés atenderte?</h4>
 
-<h3>Panel administrador</h3>
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+          <button onclick="selectModality('virtual')" id="btn-virtual"
+            class="modalidad-btn p-8 border-2 border-gray-200 rounded-2xl text-center hover:border-gray-800 group">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 group-hover:bg-gray-800 group-hover:text-white flex items-center justify-center text-3xl smooth-transition">
+              <i class="fas fa-video"></i>
+            </div>
+            <h5 class="serif text-xl mb-2">Virtual</h5>
+            <p class="text-sm text-gray-500">Videollamada (horarios según disponibilidad)</p>
+          </button>
 
-<input type="password" id="adminPass" placeholder="Contraseña">
+          <button onclick="selectModality('presencial')" id="btn-presencial"
+            class="modalidad-btn p-8 border-2 border-gray-200 rounded-2xl text-center hover:border-gray-800 group">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 group-hover:bg-gray-800 group-hover:text-white flex items-center justify-center text-3xl smooth-transition">
+              <i class="fas fa-building"></i>
+            </div>
+            <h5 class="serif text-xl mb-2">Presencial</h5>
+            <p class="text-sm text-gray-500">Consultorio en Melchor Romero</p>
+          </button>
+        </div>
 
-<button onclick="verTurnos()">Entrar</button>
+        <div class="flex justify-end">
+          <button onclick="nextStep(2)" id="btn-next-1"
+            class="px-8 py-3 bg-gray-300 text-white rounded-full font-medium cursor-not-allowed" disabled>
+            Continuar <i class="fas fa-arrow-right ml-2"></i>
+          </button>
+        </div>
+      </div>
 
-<div id="turnos"></div>
+      <!-- STEP 2: FECHA Y HORA -->
+      <div id="step2" class="bg-white rounded-3xl shadow-soft p-8 md:p-12 hidden">
+        <h4 class="serif text-2xl text-gray-800 mb-2 text-center">Seleccioná fecha y hora</h4>
+        <p class="text-center text-beige-dark mb-8" id="modality-display"></p>
 
-</div>
+        <div class="grid lg:grid-cols-2 gap-8">
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <button onclick="changeMonth(-1)" class="p-2 hover:bg-gray-100 rounded-full">
+                <i class="fas fa-chevron-left text-gray-600"></i>
+              </button>
+              <h5 class="font-semibold text-gray-800" id="currentMonth"></h5>
+              <button onclick="changeMonth(1)" class="p-2 hover:bg-gray-100 rounded-full">
+                <i class="fas fa-chevron-right text-gray-600"></i>
+              </button>
+            </div>
 
-</div>
+            <div class="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wider text-gray-400 mb-2">
+              <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+            </div>
+            <div class="grid grid-cols-7 gap-1" id="calendar"></div>
+          </div>
 
-<script>
+          <div>
+            <h5 class="font-semibold text-gray-800 mb-4">Horarios disponibles</h5>
+            <div id="time-slots-container" class="space-y-4">
+              <p class="text-gray-400 text-sm italic">Seleccioná una fecha primero</p>
+            </div>
+          </div>
+        </div>
 
-const supabase = supabase.createClient(
-"TU_URL_SUPABASE",
-"TU_ANON_KEY"
-)
+        <div class="flex justify-between mt-8">
+          <button onclick="prevStep(1)" class="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium">
+            <i class="fas fa-arrow-left mr-2"></i> Volver
+          </button>
+          <button onclick="nextStep(3)" id="btn-next-2"
+            class="px-8 py-3 bg-gray-300 text-white rounded-full font-medium cursor-not-allowed" disabled>
+            Continuar <i class="fas fa-arrow-right ml-2"></i>
+          </button>
+        </div>
+      </div>
 
-async function reservar(){
+      <!-- STEP 3: DATOS -->
+      <div id="step3" class="bg-white rounded-3xl shadow-soft p-8 md:p-12 hidden">
+        <h4 class="serif text-2xl text-gray-800 mb-8 text-center">Confirmá tu solicitud</h4>
 
-const name = document.getElementById("name").value
-const email = document.getElementById("email").value
-const time = document.getElementById("time").value
+        <div class="bg-beige-light rounded-2xl p-6 mb-8 border border-beige">
+          <div class="flex items-center gap-4 mb-4 pb-4 border-b border-beige">
+            <div class="w-12 h-12 rounded-full bg-gray-800 text-white flex items-center justify-center">
+              <i class="far fa-calendar-check text-xl"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm text-gray-500 uppercase tracking-wider">Modalidad</p>
+              <p class="font-semibold text-gray-800 capitalize" id="confirm-modality"></p>
+            </div>
+          </div>
 
-if(!name || !email || !time){
-alert("Completar todos los campos")
-return
-}
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-sm text-gray-500 uppercase tracking-wider">Fecha</p>
+              <p class="font-semibold text-gray-800" id="confirm-date"></p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500 uppercase tracking-wider">Hora</p>
+              <p class="font-semibold text-gray-800" id="confirm-time"></p>
+            </div>
+          </div>
 
-const { error } = await supabase
-.from("appointments")
-.insert([{name,email,appointment_time:time}])
+          <div id="confirm-location-wrap" class="mt-4 hidden">
+            <p class="text-sm text-gray-500 uppercase tracking-wider">Dirección</p>
+            <p class="font-semibold text-gray-800" id="confirm-location"></p>
+          </div>
+        </div>
 
-if(error){
+        <form id="bookingForm" class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Nombre completo</label>
+              <input id="fullName" name="fullName" type="text" required class="input-elegant w-full px-4 py-3 rounded-xl" placeholder="Tu nombre">
+            </div>
+            <div>
+              <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Email</label>
+              <input id="email" name="email" type="email" required class="input-elegant w-full px-4 py-3 rounded-xl" placeholder="tu@email.com">
+            </div>
+          </div>
 
-alert("Ese turno ya fue reservado")
+          <div>
+            <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Teléfono</label>
+            <input id="phone" name="phone" type="tel" required class="input-elegant w-full px-4 py-3 rounded-xl" placeholder="11 1234-5678">
+          </div>
 
-}else{
+          <div>
+            <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Motivo de consulta (opcional)</label>
+            <textarea id="reason" name="reason" rows="3" class="input-elegant w-full px-4 py-3 rounded-xl resize-none" placeholder="Contame brevemente por qué buscas atención..."></textarea>
+          </div>
 
-alert("Turno reservado correctamente")
+          <div class="flex items-start gap-3">
+            <input type="checkbox" required id="terms" class="mt-1 w-4 h-4 rounded border-gray-300 text-gray-800 focus:ring-gray-800">
+            <label for="terms" class="text-sm text-gray-600 leading-relaxed">
+              Confirmo que soy mayor de edad o responsable de un menor, y acepto las políticas de cancelación con 24hs de anticipación.
+            </label>
+          </div>
+        </form>
 
-}
+        <div class="flex justify-between mt-8">
+          <button onclick="prevStep(2)" class="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium">
+            <i class="fas fa-arrow-left mr-2"></i> Volver
+          </button>
+          <button id="btn-submit" onclick="submitBooking()" class="px-8 py-3 bg-gray-800 text-white rounded-full font-medium hover:bg-gray-700 smooth-transition shadow-lg">
+            Enviar Solicitud <i class="fas fa-paper-plane ml-2"></i>
+          </button>
+        </div>
+      </div>
 
-}
+      <!-- SUCCESS -->
+      <div id="success" class="hidden bg-white rounded-3xl shadow-soft p-12 text-center">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center text-3xl text-gray-800">
+          <i class="fas fa-check"></i>
+        </div>
+        <h4 class="handwritten text-3xl text-gray-800 mb-4">¡Solicitud enviada!</h4>
+        <p class="text-gray-600 mb-8 max-w-md mx-auto">
+          Tu solicitud de turno fue registrada. Te contactaré pronto para confirmar.
+        </p>
+        <button onclick="resetBooking()" class="px-8 py-3 border-2 border-gray-800 text-gray-800 rounded-full hover:bg-gray-800 hover:text-white smooth-transition">
+          Agendar otro turno
+        </button>
+      </div>
+    </div>
+  </section>
 
-async function verTurnos(){
+  <!-- ADMIN PANEL (Hidden by default) -->
+  <section id="admin-section" class="py-20 bg-gray-50 hidden">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="admin-panel p-8">
+        <div class="flex justify-between items-center mb-8 border-b pb-4">
+          <h3 class="handwritten text-3xl text-gray-800">Panel de Administración</h3>
+          <button onclick="toggleAdmin()" class="text-gray-500 hover:text-gray-800">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
 
-const pass = document.getElementById("adminPass").value
+        <!-- Login Form -->
+        <div id="admin-login" class="max-w-md mx-auto text-center py-8">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center text-2xl text-gray-600">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h4 class="text-xl font-semibold mb-4">Acceso Profesional</h4>
+          <input type="password" id="admin-password" placeholder="Contraseña" 
+            class="input-elegant w-full px-4 py-3 rounded-xl mb-4 text-center">
+          <button onclick="loginAdmin()" class="w-full px-8 py-3 bg-gray-800 text-white rounded-full font-medium hover:bg-gray-700">
+            Ingresar
+          </button>
+          <p id="login-error" class="text-red-500 text-sm mt-2 hidden">Contraseña incorrecta</p>
+        </div>
 
-if(pass !== "1234"){
-alert("Contraseña incorrecta")
-return
-}
+        <!-- Admin Dashboard -->
+        <div id="admin-dashboard" class="hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h4 class="text-lg font-semibold">Turnos Reservados</h4>
+            <button onclick="loadAppointments()" class="text-sm text-gray-600 hover:text-gray-800">
+              <i class="fas fa-sync-alt mr-1"></i> Actualizar
+            </button>
+          </div>
+          
+          <div id="appointments-list" class="space-y-3">
+            <p class="text-gray-400 text-center py-8">Cargando turnos...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-const { data } = await supabase
-.from("appointments")
-.select("*")
+  <!-- CONTACTO -->
+  <section class="py-20 bg-white border-t border-beige">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <h3 class="handwritten text-3xl text-gray-800 mb-8">Contacto</h3>
 
-let html=""
+      <div class="flex flex-col md:flex-row justify-center items-center gap-8">
+        <a href="tel:2214547057" class="flex items-center gap-3 text-gray-700 hover:text-gray-900 smooth-transition">
+          <div class="w-12 h-12 rounded-full border border-gray-300 flex items-center justify-center">
+            <i class="fas fa-phone"></i>
+          </div>
+          <span class="text-lg">221 454-7057</span>
+        </a>
 
-data.forEach(t=>{
-html += `<p>${t.appointment_time} - ${t.name}</p>`
-})
+        <a href="mailto:FlorPsico@outlook.es" class="flex items-center gap-3 text-gray-700 hover:text-gray-900 smooth-transition">
+          <div class="w-12 h-12 rounded-full border border-gray-300 flex items-center justify-center">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <span class="text-lg">FlorPsico@outlook.es</span>
+        </a>
+      </div>
+    </div>
+  </section>
 
-document.getElementById("turnos").innerHTML = html
+  <!-- FOOTER -->
+  <footer class="bg-gray-800 text-white py-12">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <h4 class="handwritten text-3xl mb-4">Florencia Rosales</h4>
+      <p class="text-gray-400 mb-2">Licenciada en Psicología - MP 057074</p>
+      <p class="text-gray-500 text-sm mb-8">Atención a niños, adolescentes y adultos</p>
 
-}
+      <div class="flex justify-center gap-6 mb-8">
+        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
+          <i class="fab fa-instagram"></i>
+        </a>
+        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
+          <i class="fab fa-whatsapp"></i>
+        </a>
+        <a href="mailto:FlorPsico@outlook.es" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
+          <i class="fas fa-envelope"></i>
+        </a>
+      </div>
 
-</script>
+      <p class="text-gray-600 text-sm">© 2026 Todos los derechos reservados</p>
+    </div>
+  </footer>
 
+  <script>
+    // CONFIGURACIÓN SUPABASE - REEMPLAZA CON TUS DATOS
+    const SUPABASE_URL = "https://yodefzidtoluudozgces.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZGVmemlkdG9sdXVkb3pnY2VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDEwOTUsImV4cCI6MjA4ODM3NzA5NX0.ZiHokkUpT7s1CebAl9roYGj39mN5r8lu17dz2gmrFCU";
+    
+    // Inicializar cliente Supabase
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Contraseña admin (cambiala por una segura)
+    const ADMIN_PASSWORD = "flor2024";
+
+    // Estado
+    let currentStep = 1;
+    let selectedModality = null;
+    let selectedDate = null;
+    let selectedTime = null;
+    let currentDate = new Date();
+    let bookedSlots = []; // Array de turnos ya reservados
+
+    // Configuración de horarios
+    const slotMinutes = 30;
+    const config = {
+      virtual: {
+        label: 'Virtual',
+        windowsByDay: {
+          1: [{ start: "13:00", end: "18:00" }],
+          3: [{ start: "14:00", end: "19:00" }],
+          4: [{ start: "18:00", end: "20:00" }],
+        }
+      },
+      presencial: {
+        label: 'Presencial',
+        location: "153 e 518 y 519, La Plata, Melchor Romero",
+        windowsByDay: {
+          1: [{ start: "13:00", end: "18:00" }],
+          3: [{ start: "14:00", end: "19:00" }],
+          4: [{ start: "18:00", end: "20:00" }],
+          5: [{ start: "09:00", end: "13:00" }, { start: "14:00", end: "17:00" }],
+        }
+      }
+    };
+
+    // Helpers de tiempo
+    function timeToMinutes(t) {
+      const [hh, mm] = t.split(':').map(Number);
+      return hh * 60 + mm;
+    }
+    
+    function minutesToTime(m) {
+      const hh = Math.floor(m / 60).toString().padStart(2, '0');
+      const mm = (m % 60).toString().padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    
+    function getDayWindows(modality, dayOfWeek) {
+      return config[modality]?.windowsByDay?.[dayOfWeek] || [];
+    }
+    
+    function buildSlotsForDay(modality, dayOfWeek, stepMin = 30) {
+      const windows = getDayWindows(modality, dayOfWeek);
+      const slots = [];
+      for (const w of windows) {
+        const start = timeToMinutes(w.start);
+        const end = timeToMinutes(w.end);
+        for (let m = start; m + stepMin <= end; m += stepMin) {
+          slots.push(minutesToTime(m));
+        }
+      }
+      return slots;
+    }
+    
+    function modalityHasAvailabilityOnDay(modality, dayOfWeek) {
+      return getDayWindows(modality, dayOfWeek).length > 0;
+    }
+
+    // Cargar turnos reservados desde Supabase
+    async function loadBookedSlots() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('appointments')
+          .select('appointment_date, appointment_time, modality');
+        
+        if (error) {
+          console.error('Error cargando turnos:', error);
+          return;
+        }
+        
+        bookedSlots = data || [];
+        console.log('Turnos cargados:', bookedSlots);
+      } catch (err) {
+        console.error('Error:', err);
+      }
+    }
+
+    // Verificar si un slot está reservado
+    function isSlotBooked(date, time, modality) {
+      const dateStr = date.toISOString().split('T')[0];
+      return bookedSlots.some(slot => 
+        slot.appointment_date === dateStr && 
+        slot.appointment_time === time &&
+        slot.modality === modality
+      );
+    }
+
+    function selectModality(modality) {
+      selectedModality = modality;
+      selectedDate = null;
+      selectedTime = null;
+
+      document.querySelectorAll('.modalidad-btn').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById(`btn-${modality}`).classList.add('selected');
+
+      const btn = document.getElementById('btn-next-1');
+      btn.disabled = false;
+      btn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+      btn.classList.add('bg-gray-800', 'hover:bg-gray-700');
+    }
+
+    function nextStep(step) {
+      if (step === 2 && !selectedModality) return;
+      if (step === 3 && (!selectedDate || !selectedTime)) return;
+
+      document.getElementById(`step${currentStep}`).classList.add('hidden');
+      document.getElementById(`step${step}`).classList.remove('hidden');
+
+      document.getElementById(`step${currentStep}-ind`).classList.remove('active');
+      document.getElementById(`step${currentStep}-ind`).classList.add('completed');
+      document.getElementById(`step${currentStep}-ind`).innerHTML = '<i class="fas fa-check text-xs"></i>';
+
+      if (document.getElementById(`line${currentStep}`)) {
+        document.getElementById(`line${currentStep}`).classList.remove('bg-gray-300');
+        document.getElementById(`line${currentStep}`).classList.add('bg-gray-800');
+      }
+
+      document.getElementById(`step${step}-ind`).classList.remove('text-gray-400', 'border-gray-300');
+      document.getElementById(`step${step}-ind`).classList.add('active', 'border-gray-800');
+
+      currentStep = step;
+
+      if (step === 2) {
+        document.getElementById('modality-display').textContent = `Modalidad: ${config[selectedModality].label}`;
+        renderCalendar();
+        renderTimeSlots();
+      } else if (step === 3) {
+        updateConfirmation();
+      }
+    }
+
+    function prevStep(step) {
+      document.getElementById(`step${currentStep}`).classList.add('hidden');
+      document.getElementById(`step${step}`).classList.remove('hidden');
+
+      document.getElementById(`step${step}-ind`).classList.remove('completed');
+      document.getElementById(`step${step}-ind`).classList.add('active');
+      document.getElementById(`step${step}-ind`).innerHTML = step;
+
+      if (document.getElementById(`line${step}`)) {
+        document.getElementById(`line${step}`).classList.remove('bg-gray-800');
+        document.getElementById(`line${step}`).classList.add('bg-gray-300');
+      }
+
+      currentStep = step;
+    }
+
+    async function renderCalendar() {
+      // Recargar turnos antes de renderizar
+      await loadBookedSlots();
+      
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      let html = '';
+      for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day empty p-3"></div>';
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dow = date.getDay();
+        const isPast = date < today;
+        const isToday = date.getTime() === today.getTime();
+        const isAvailable = !isPast && modalityHasAvailabilityOnDay(selectedModality, dow);
+        const isSelected = selectedDate && date.getTime() === selectedDate.getTime();
+        
+        // Verificar si todos los slots del día están ocupados
+        const slots = buildSlotsForDay(selectedModality, dow);
+        const dateStr = date.toISOString().split('T')[0];
+        const bookedCount = bookedSlots.filter(s => 
+          s.appointment_date === dateStr && s.modality === selectedModality
+        ).length;
+        const fullyBooked = bookedCount >= slots.length && slots.length > 0;
+
+        let classes = 'calendar-day p-3 rounded-lg text-center cursor-pointer text-sm ';
+        if (isSelected) classes += 'selected ';
+        else if (isPast) classes += 'disabled ';
+        else if (fullyBooked) classes += 'booked ';
+        else if (!isAvailable) classes += 'text-gray-300 cursor-not-allowed ';
+        else {
+          classes += 'hover:bg-gray-100 ';
+          if (isToday) classes += 'border-2 border-gray-400 ';
+        }
+
+        html += `<div class="${classes}" onclick="${isAvailable && !fullyBooked ? `selectDate(${year}, ${month}, ${day})` : ''}">${day}</div>`;
+      }
+
+      document.getElementById('calendar').innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function selectDate(year, month, day) {
+      selectedDate = new Date(year, month, day);
+      selectedTime = null;
+      renderCalendar();
+      renderTimeSlots();
+      updateStep2Button();
+    }
+
+    function renderTimeSlots() {
+      const container = document.getElementById('time-slots-container');
+
+      if (!selectedDate) {
+        container.innerHTML = '<p class="text-gray-400 text-sm italic">Seleccioná una fecha primero</p>';
+        return;
+      }
+
+      const dow = selectedDate.getDay();
+      const slots = buildSlotsForDay(selectedModality, dow, slotMinutes);
+
+      if (!slots.length) {
+        container.innerHTML = '<p class="text-gray-400 text-sm">No hay horarios disponibles para este día</p>';
+        return;
+      }
+
+      let html = '<div class="grid grid-cols-3 gap-3">';
+      slots.forEach(time => {
+        const isSelected = selectedTime === time;
+        const isBooked = isSlotBooked(selectedDate, time, selectedModality);
+        
+        let classes = 'time-slot p-3 rounded-xl border text-center text-sm font-medium ';
+        if (isBooked) {
+          classes += 'booked';
+          html += `<div class="${classes}" title="Turno reservado">${time}</div>`;
+        } else if (isSelected) {
+          classes += 'selected border-gray-800 cursor-pointer';
+          html += `<button type="button" class="${classes}" onclick="selectTime('${time}')">${time}</button>`;
+        } else {
+          classes += 'border-gray-200 hover:border-gray-800 text-gray-700 bg-white cursor-pointer';
+          html += `<button type="button" class="${classes}" onclick="selectTime('${time}')">${time}</button>`;
+        }
+      });
+      html += '</div>';
+
+      if (selectedModality === 'presencial') {
+        html += `<p class="text-xs text-gray-500 mt-4 text-center">
+          Dirección del consultorio: <span class="font-semibold">${config.presencial.location}</span>
+        </p>`;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function selectTime(time) {
+      selectedTime = time;
+      renderTimeSlots();
+      updateStep2Button();
+    }
+
+    function updateStep2Button() {
+      const btn = document.getElementById('btn-next-2');
+      if (selectedTime) {
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+        btn.classList.add('bg-gray-800', 'hover:bg-gray-700');
+      }
+    }
+
+    function updateConfirmation() {
+      document.getElementById('confirm-modality').textContent = config[selectedModality].label;
+
+      const dateStr = selectedDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      document.getElementById('confirm-date').textContent = dateStr;
+      document.getElementById('confirm-time').textContent = selectedTime + ' hs';
+
+      const wrap = document.getElementById('confirm-location-wrap');
+      const loc = document.getElementById('confirm-location');
+
+      if (selectedModality === 'presencial') {
+        wrap.classList.remove('hidden');
+        loc.textContent = config.presencial.location;
+      } else {
+        wrap.classList.add('hidden');
+        loc.textContent = '';
+      }
+    }
+
+    async function submitBooking() {
+      const form = document.getElementById('bookingForm');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      // Verificar nuevamente que el slot esté libre (doble check)
+      if (isSlotBooked(selectedDate, selectedTime, selectedModality)) {
+        alert('Lo sentimos, este turno acaba de ser reservado por otra persona. Por favor selecciona otro horario.');
+        renderTimeSlots();
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit');
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-not-allowed');
+      btn.innerHTML = 'Enviando... <i class="fas fa-spinner fa-spin ml-2"></i>';
+
+      const appointmentData = {
+        full_name: document.getElementById('fullName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        reason: document.getElementById('reason').value.trim(),
+        modality: selectedModality,
+        appointment_date: selectedDate.toISOString().split('T')[0],
+        appointment_time: selectedTime,
+        status: 'pending'
+      };
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('appointments')
+          .insert([appointmentData]);
+
+        if (error) {
+          if (error.code === '23505') { // Unique violation
+            alert('Este turno ya fue reservado. Por favor selecciona otro horario.');
+            renderTimeSlots();
+          } else {
+            alert('Error al guardar el turno: ' + error.message);
+          }
+          btn.disabled = false;
+          btn.classList.remove('opacity-70', 'cursor-not-allowed');
+          btn.innerHTML = original;
+          return;
+        }
+
+        // Éxito
+        document.getElementById('step3').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+        
+        // Recargar turnos
+        await loadBookedSlots();
+        
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error de conexión. Por favor intenta nuevamente.');
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btn.innerHTML = original;
+      }
+    }
+
+    function resetBooking() {
+      selectedModality = null;
+      selectedDate = null;
+      selectedTime = null;
+      currentStep = 1;
+      currentDate = new Date();
+
+      document.getElementById('success').classList.add('hidden');
+      document.getElementById('step1').classList.remove('hidden');
+
+      document.querySelectorAll('.step-indicator').forEach((el, idx) => {
+        el.className = 'step-indicator w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold';
+        if (idx === 0) {
+          el.classList.add('active', 'border-gray-800');
+          el.innerHTML = '1';
+        } else {
+          el.classList.add('border-gray-300', 'text-gray-400');
+          el.innerHTML = idx + 1;
+        }
+      });
+      document.querySelectorAll('[id^="line"]').forEach(el => {
+        el.className = 'flex-1 h-px bg-gray-300 mx-2';
+      });
+
+      document.getElementById('btn-next-1').disabled = true;
+      document.getElementById('btn-next-1').className = 'px-8 py-3 bg-gray-300 text-white rounded-full font-medium cursor-not-allowed';
+
+      document.querySelectorAll('.modalidad-btn').forEach(btn => btn.classList.remove('selected'));
+
+      document.getElementById('bookingForm').reset();
+      document.getElementById('time-slots-container').innerHTML = '<p class="text-gray-400 text-sm italic">Seleccioná una fecha primero</p>';
+    }
+
+    // ADMIN FUNCTIONS
+    function toggleAdmin() {
+      const adminSection = document.getElementById('admin-section');
+      if (adminSection.classList.contains('hidden')) {
+        adminSection.classList.remove('hidden');
+        adminSection.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        adminSection.classList.add('hidden');
+      }
+    }
+
+    function loginAdmin() {
+      const password = document.getElementById('admin-password').value;
+      if (password === ADMIN_PASSWORD) {
+        document.getElementById('admin-login').classList.add('hidden');
+        document.getElementById('admin-dashboard').classList.remove('hidden');
+        loadAppointments();
+      } else {
+        document.getElementById('login-error').classList.remove('hidden');
+      }
+    }
+
+    async function loadAppointments() {
+      const container = document.getElementById('appointments-list');
+      container.innerHTML = '<p class="text-gray-400 text-center py-8">Cargando turnos...</p>';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('appointments')
+          .select('*')
+          .order('appointment_date', { ascending: true })
+          .order('appointment_time', { ascending: true });
+
+        if (error) {
+          container.innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<p class="text-gray-400 text-center py-8">No hay turnos reservados</p>';
+          return;
+        }
+
+        let html = '';
+        data.forEach(apt => {
+          const date = new Date(apt.appointment_date);
+          const dateStr = date.toLocaleDateString('es-ES', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+          });
+          
+          html += `
+            <div class="appointment-card p-4 rounded-lg flex justify-between items-center">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold text-gray-800">${dateStr}</span>
+                  <span class="text-gray-600">${apt.appointment_time} hs</span>
+                  <span class="px-2 py-1 rounded text-xs ${apt.modality === 'virtual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                    ${apt.modality === 'virtual' ? 'Virtual' : 'Presencial'}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-700 font-medium">${apt.full_name}</p>
+                <p class="text-xs text-gray-500">${apt.phone} | ${apt.email}</p>
+                ${apt.reason ? `<p class="text-xs text-gray-400 mt-1">${apt.reason}</p>` : ''}
+              </div>
+              <button onclick="deleteAppointment('${apt.id}')" class="btn-danger ml-4">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = '<p class="text-red-500 text-center">Error de conexión</p>';
+      }
+    }
+
+    async function deleteAppointment(id) {
+      if (!confirm('¿Estás segura de que querés cancelar este turno?')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('appointments')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          alert('Error al eliminar: ' + error.message);
+          return;
+        }
+
+        loadAppointments();
+        loadBookedSlots(); // Recargar en el fondo para actualizar disponibilidad
+      } catch (err) {
+        alert('Error de conexión');
+      }
+    }
+
+    // Inicializar al cargar
+    document.addEventListener('DOMContentLoaded', () => {
+      loadBookedSlots();
+    });
+  </script>
 </body>
 </html>
