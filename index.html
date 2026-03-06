@@ -1,57 +1,73 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
 <meta charset="UTF-8">
-<title>Turnos - Lic. Florencia Rosales</title>
+<title>Turnos – Lic. Florencia Rosales</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
 
 body{
-font-family:Arial;
-background:#f2f2f2;
-text-align:center;
-padding:40px;
+font-family: Arial, sans-serif;
+background: linear-gradient(135deg,#e9f0f7,#f5f7fb);
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
 }
 
 .container{
-max-width:700px;
-margin:auto;
 background:white;
-padding:30px;
-border-radius:10px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
+padding:40px;
+border-radius:12px;
+width:420px;
+box-shadow:0 10px 25px rgba(0,0,0,0.1);
+text-align:center;
+}
+
+h1{
+margin-bottom:10px;
+}
+
+.subtitle{
+color:#666;
+font-size:14px;
+margin-bottom:25px;
 }
 
 input,select{
-padding:10px;
-margin:8px;
-width:80%;
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:1px solid #ccc;
 }
 
 button{
-padding:10px 15px;
+margin-top:15px;
+padding:12px;
+width:100%;
+background:#3a8d4f;
 border:none;
-background:#4CAF50;
 color:white;
-border-radius:6px;
+font-size:16px;
+border-radius:8px;
 cursor:pointer;
 }
 
-button:disabled{
-background:gray;
+button:hover{
+background:#2f7441;
 }
 
 .admin{
-margin-top:40px;
+margin-top:30px;
 padding-top:20px;
-border-top:1px solid #ccc;
+border-top:1px solid #ddd;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -60,38 +76,36 @@ border-top:1px solid #ccc;
 
 <h1>Turnos - Lic. Florencia Rosales</h1>
 
-<p>
+<div class="subtitle">
 Consultorio presencial<br>
-<b>153 e 518 y 519 – Melchor Romero – La Plata</b>
-</p>
+153 e 518 y 519 – Melchor Romero – La Plata
+</div>
 
-<h2>Reservar turno</h2>
+<h3>Reservar turno</h3>
 
-<input id="name" placeholder="Nombre"><br>
-<input id="email" placeholder="Email"><br>
+<input id="name" placeholder="Nombre completo">
 
-<select id="slot"></select>
+<input id="email" placeholder="Email">
 
-<br><br>
+<select id="time">
+<option value="">Elegir horario</option>
+<option>16:00</option>
+<option>17:00</option>
+<option>18:00</option>
+<option>19:00</option>
+</select>
 
 <button onclick="reservar()">Reservar turno</button>
 
-<p id="msg"></p>
-
 <div class="admin">
 
-<h2>Panel administrador</h2>
+<h3>Panel administrador</h3>
 
-<input id="adminpass" type="password" placeholder="Contraseña">
-<button onclick="login()">Entrar</button>
+<input type="password" id="adminPass" placeholder="Contraseña">
 
-<div id="panel" style="display:none">
+<button onclick="verTurnos()">Entrar</button>
 
-<h3>Turnos reservados</h3>
-
-<ul id="lista"></ul>
-
-</div>
+<div id="turnos"></div>
 
 </div>
 
@@ -100,143 +114,59 @@ Consultorio presencial<br>
 <script>
 
 const supabase = supabase.createClient(
-"https://yodefzidtoluudozgces.supabase.co",
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZGVmemlkdG9sdXVkb3pnY2VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDEwOTUsImV4cCI6MjA4ODM3NzA5NX0.ZiHokkUpT7s1CebAl9roYGj39mN5r8lu17dz2gmrFCU"
+"TU_URL_SUPABASE",
+"TU_ANON_KEY"
 )
-
-const ADMIN_PASS="Apolo2000"
-
-const horarios=[
-
-"Lunes 13:00","Lunes 13:40","Lunes 14:20","Lunes 15:00","Lunes 15:40","Lunes 16:20","Lunes 17:00","Lunes 17:40",
-
-"Miércoles 14:00","Miércoles 14:40","Miércoles 15:20","Miércoles 16:00","Miércoles 16:40","Miércoles 17:20","Miércoles 18:00","Miércoles 18:40",
-
-"Jueves 18:00","Jueves 18:40","Jueves 19:20",
-
-"Viernes 09:00","Viernes 09:40","Viernes 10:20","Viernes 11:00","Viernes 11:40","Viernes 12:20",
-
-"Viernes 14:00","Viernes 14:40","Viernes 15:20","Viernes 16:00","Viernes 16:40"
-
-]
-
-const select=document.getElementById("slot")
-
-horarios.forEach(h=>{
-
-let o=document.createElement("option")
-o.value=h
-o.innerText=h
-
-select.appendChild(o)
-
-})
-
-async function cargar(){
-
-const {data}=await supabase
-.from("appointments")
-.select("*")
-
-data.forEach(t=>{
-
-let opt=[...select.options].find(o=>o.value===t.appointment_time)
-
-if(opt) opt.disabled=true
-
-})
-
-}
 
 async function reservar(){
 
-let name=document.getElementById("name").value
-let email=document.getElementById("email").value
-let slot=document.getElementById("slot").value
+const name = document.getElementById("name").value
+const email = document.getElementById("email").value
+const time = document.getElementById("time").value
 
-if(!name||!email){
-
-alert("Completa nombre y email")
+if(!name || !email || !time){
+alert("Completar todos los campos")
 return
-
 }
 
-let {error}=await supabase
+const { error } = await supabase
 .from("appointments")
-.insert({
-name:name,
-email:email,
-appointment_time:slot
-})
+.insert([{name,email,appointment_time:time}])
 
 if(error){
 
-document.getElementById("msg").innerText="Ese turno ya fue reservado"
+alert("Ese turno ya fue reservado")
 
 }else{
 
-document.getElementById("msg").innerText="Turno reservado correctamente"
-
-location.reload()
+alert("Turno reservado correctamente")
 
 }
 
 }
 
-function login(){
+async function verTurnos(){
 
-let pass=document.getElementById("adminpass").value
+const pass = document.getElementById("adminPass").value
 
-if(pass===ADMIN_PASS){
-
-document.getElementById("panel").style.display="block"
-
-cargarAdmin()
-
-}else{
-
+if(pass !== "1234"){
 alert("Contraseña incorrecta")
-
+return
 }
 
-}
-
-async function cargarAdmin(){
-
-const {data}=await supabase
+const { data } = await supabase
 .from("appointments")
 .select("*")
 
-let lista=document.getElementById("lista")
-
-lista.innerHTML=""
+let html=""
 
 data.forEach(t=>{
-
-let li=document.createElement("li")
-
-li.innerHTML=t.appointment_time+" - "+t.name+
-
-" <button onclick='cancelar(\""+t.id+"\")'>Cancelar</button>"
-
-lista.appendChild(li)
-
+html += `<p>${t.appointment_time} - ${t.name}</p>`
 })
 
-}
-
-async function cancelar(id){
-
-await supabase
-.from("appointments")
-.delete()
-.eq("id",id)
-
-location.reload()
+document.getElementById("turnos").innerHTML = html
 
 }
-
-cargar()
 
 </script>
 
