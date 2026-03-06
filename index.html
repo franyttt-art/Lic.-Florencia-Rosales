@@ -78,7 +78,6 @@
       box-shadow: 0 0 0 3px rgba(44,44,44,0.1);
     }
 
-    /* Admin panel styles */
     .admin-panel {
       background: white;
       border-radius: 1rem;
@@ -452,15 +451,14 @@
   </footer>
 
   <script>
-    // CONFIGURACIÓN SUPABASE - REEMPLAZA CON TUS DATOS
+    // CONFIGURACIÓN - REEMPLAZÁ CON TUS DATOS REALES
     const SUPABASE_URL = "https://yodefzidtoluudozgces.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZGVmemlkdG9sdXVkb3pnY2VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDEwOTUsImV4cCI6MjA4ODM3NzA5NX0.ZiHokkUpT7s1CebAl9roYGj39mN5r8lu17dz2gmrFCU";
-    
+    const FORMSPREE_ENDPOINT = "https://formspree.io/f/xykdleee";
+    const ADMIN_PASSWORD = "flor2024";
+
     // Inicializar cliente Supabase
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    // Contraseña admin (cambiala por una segura)
-    const ADMIN_PASSWORD = "flor2024";
 
     // Estado
     let currentStep = 1;
@@ -468,7 +466,7 @@
     let selectedDate = null;
     let selectedTime = null;
     let currentDate = new Date();
-    let bookedSlots = []; // Array de turnos ya reservados
+    let bookedSlots = [];
 
     // Configuración de horarios
     const slotMinutes = 30;
@@ -539,7 +537,6 @@
         }
         
         bookedSlots = data || [];
-        console.log('Turnos cargados:', bookedSlots);
       } catch (err) {
         console.error('Error:', err);
       }
@@ -616,7 +613,6 @@
     }
 
     async function renderCalendar() {
-      // Recargar turnos antes de renderizar
       await loadBookedSlots();
       
       const year = currentDate.getFullYear();
@@ -641,7 +637,6 @@
         const isAvailable = !isPast && modalityHasAvailabilityOnDay(selectedModality, dow);
         const isSelected = selectedDate && date.getTime() === selectedDate.getTime();
         
-        // Verificar si todos los slots del día están ocupados
         const slots = buildSlotsForDay(selectedModality, dow);
         const dateStr = date.toISOString().split('T')[0];
         const bookedCount = bookedSlots.filter(s => 
@@ -769,7 +764,6 @@
         return;
       }
 
-      // Verificar nuevamente que el slot esté libre (doble check)
       if (isSlotBooked(selectedDate, selectedTime, selectedModality)) {
         alert('Lo sentimos, este turno acaba de ser reservado por otra persona. Por favor selecciona otro horario.');
         renderTimeSlots();
@@ -784,186 +778,4 @@
 
       const appointmentData = {
         full_name: document.getElementById('fullName').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        reason: document.getElementById('reason').value.trim(),
-        modality: selectedModality,
-        appointment_date: selectedDate.toISOString().split('T')[0],
-        appointment_time: selectedTime,
-        status: 'pending'
-      };
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('appointments')
-          .insert([appointmentData]);
-
-        if (error) {
-          if (error.code === '23505') { // Unique violation
-            alert('Este turno ya fue reservado. Por favor selecciona otro horario.');
-            renderTimeSlots();
-          } else {
-            alert('Error al guardar el turno: ' + error.message);
-          }
-          btn.disabled = false;
-          btn.classList.remove('opacity-70', 'cursor-not-allowed');
-          btn.innerHTML = original;
-          return;
-        }
-
-        // Éxito
-        document.getElementById('step3').classList.add('hidden');
-        document.getElementById('success').classList.remove('hidden');
-        
-        // Recargar turnos
-        await loadBookedSlots();
-        
-      } catch (err) {
-        console.error('Error:', err);
-        alert('Error de conexión. Por favor intenta nuevamente.');
-        btn.disabled = false;
-        btn.classList.remove('opacity-70', 'cursor-not-allowed');
-        btn.innerHTML = original;
-      }
-    }
-
-    function resetBooking() {
-      selectedModality = null;
-      selectedDate = null;
-      selectedTime = null;
-      currentStep = 1;
-      currentDate = new Date();
-
-      document.getElementById('success').classList.add('hidden');
-      document.getElementById('step1').classList.remove('hidden');
-
-      document.querySelectorAll('.step-indicator').forEach((el, idx) => {
-        el.className = 'step-indicator w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold';
-        if (idx === 0) {
-          el.classList.add('active', 'border-gray-800');
-          el.innerHTML = '1';
-        } else {
-          el.classList.add('border-gray-300', 'text-gray-400');
-          el.innerHTML = idx + 1;
-        }
-      });
-      document.querySelectorAll('[id^="line"]').forEach(el => {
-        el.className = 'flex-1 h-px bg-gray-300 mx-2';
-      });
-
-      document.getElementById('btn-next-1').disabled = true;
-      document.getElementById('btn-next-1').className = 'px-8 py-3 bg-gray-300 text-white rounded-full font-medium cursor-not-allowed';
-
-      document.querySelectorAll('.modalidad-btn').forEach(btn => btn.classList.remove('selected'));
-
-      document.getElementById('bookingForm').reset();
-      document.getElementById('time-slots-container').innerHTML = '<p class="text-gray-400 text-sm italic">Seleccioná una fecha primero</p>';
-    }
-
-    // ADMIN FUNCTIONS
-    function toggleAdmin() {
-      const adminSection = document.getElementById('admin-section');
-      if (adminSection.classList.contains('hidden')) {
-        adminSection.classList.remove('hidden');
-        adminSection.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        adminSection.classList.add('hidden');
-      }
-    }
-
-    function loginAdmin() {
-      const password = document.getElementById('admin-password').value;
-      if (password === ADMIN_PASSWORD) {
-        document.getElementById('admin-login').classList.add('hidden');
-        document.getElementById('admin-dashboard').classList.remove('hidden');
-        loadAppointments();
-      } else {
-        document.getElementById('login-error').classList.remove('hidden');
-      }
-    }
-
-    async function loadAppointments() {
-      const container = document.getElementById('appointments-list');
-      container.innerHTML = '<p class="text-gray-400 text-center py-8">Cargando turnos...</p>';
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('appointments')
-          .select('*')
-          .order('appointment_date', { ascending: true })
-          .order('appointment_time', { ascending: true });
-
-        if (error) {
-          container.innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
-          return;
-        }
-
-        if (!data || data.length === 0) {
-          container.innerHTML = '<p class="text-gray-400 text-center py-8">No hay turnos reservados</p>';
-          return;
-        }
-
-        let html = '';
-        data.forEach(apt => {
-          const date = new Date(apt.appointment_date);
-          const dateStr = date.toLocaleDateString('es-ES', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short'
-          });
-          
-          html += `
-            <div class="appointment-card p-4 rounded-lg flex justify-between items-center">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold text-gray-800">${dateStr}</span>
-                  <span class="text-gray-600">${apt.appointment_time} hs</span>
-                  <span class="px-2 py-1 rounded text-xs ${apt.modality === 'virtual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
-                    ${apt.modality === 'virtual' ? 'Virtual' : 'Presencial'}
-                  </span>
-                </div>
-                <p class="text-sm text-gray-700 font-medium">${apt.full_name}</p>
-                <p class="text-xs text-gray-500">${apt.phone} | ${apt.email}</p>
-                ${apt.reason ? `<p class="text-xs text-gray-400 mt-1">${apt.reason}</p>` : ''}
-              </div>
-              <button onclick="deleteAppointment('${apt.id}')" class="btn-danger ml-4">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          `;
-        });
-
-        container.innerHTML = html;
-      } catch (err) {
-        container.innerHTML = '<p class="text-red-500 text-center">Error de conexión</p>';
-      }
-    }
-
-    async function deleteAppointment(id) {
-      if (!confirm('¿Estás segura de que querés cancelar este turno?')) return;
-
-      try {
-        const { error } = await supabaseClient
-          .from('appointments')
-          .delete()
-          .eq('id', id);
-
-        if (error) {
-          alert('Error al eliminar: ' + error.message);
-          return;
-        }
-
-        loadAppointments();
-        loadBookedSlots(); // Recargar en el fondo para actualizar disponibilidad
-      } catch (err) {
-        alert('Error de conexión');
-      }
-    }
-
-    // Inicializar al cargar
-    document.addEventListener('DOMContentLoaded', () => {
-      loadBookedSlots();
-    });
-  </script>
-</body>
-</html>
+        email
