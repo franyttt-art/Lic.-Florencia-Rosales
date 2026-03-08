@@ -214,23 +214,25 @@
 <body class="antialiased">
 
   <!-- NAV -->
-  <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-beige">
-    <div class="max-w-6xl mx-auto px-6 py-4">
-      <div class="flex justify-between items-center">
-        <div class="text-center">
-          <h1 class="handwritten text-3xl text-gray-800">Florencia Rosales</h1>
-          <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
-        </div>
-        <div class="hidden md:flex items-center space-x-8 text-sm uppercase tracking-wider">
-          <a href="#inicio" class="hover:text-beige-dark smooth-transition">Inicio</a>
-          <a href="#agenda" class="px-6 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 smooth-transition">Agendar Turno</a>
-          <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800">
-            <i class="fas fa-lock"></i> Admin
-          </button>
-        </div>
+<nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-beige">
+  <div class="max-w-6xl mx-auto px-6 py-4">
+    <div class="flex justify-between items-center">
+      <div class="text-center">
+        <h1 class="handwritten text-3xl text-gray-800">Florencia Rosales</h1>
+        <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
+      </div>
+      
+      <!-- Menú desktop y mobile (unificado) -->
+      <div class="flex items-center space-x-4 md:space-x-8 text-xs md:text-sm uppercase tracking-wider">
+        <a href="#inicio" class="hidden md:block hover:text-beige-dark smooth-transition">Inicio</a>
+        <a href="#agenda" class="px-4 md:px-6 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 smooth-transition">Agendar Turno</a>
+        <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800 flex items-center gap-1">
+          <i class="fas fa-lock"></i> <span class="hidden sm:inline">Admin</span>
+        </button>
       </div>
     </div>
-  </nav>
+  </div>
+</nav>
 
   <!-- HERO -->
   <section id="inicio" class="pt-32 pb-20 px-6 leaf-shadow">
