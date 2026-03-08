@@ -1433,4 +1433,129 @@
       
       slots.forEach(time => {
         const isBooked = isSlotBooked(dateStr, time, editingAppointment?.id);
-        const isCurrent = time ===
+        const isCurrent = time === currentTime;
+        
+        const option = document.createElement('option');
+        option.value = time;
+        option.textContent = time + (isBooked ? ' (Ocupado)' : '') + (isCurrent ? ' - Actual' : '');
+        
+        if (isBooked && !isCurrent) {
+          option.disabled = true;
+          option.style.color = '#999';
+        } else if (isCurrent) {
+          option.selected = true;
+          option.style.fontWeight = 'bold';
+        }
+        
+        select.appendChild(option);
+      });
+    }
+
+    document.getElementById('edit-date')?.addEventListener('change', async function() {
+      if (!editingAppointment) return;
+      const modality = document.getElementById('edit-modality').value;
+      await updateEditTimeSlots(this.value, modality, null);
+    });
+
+    document.getElementById('edit-modality')?.addEventListener('change', async function() {
+      if (!editingAppointment) return;
+      const date = document.getElementById('edit-date').value;
+      await updateEditTimeSlots(date, this.value, null);
+    });
+
+    async function saveEdit() {
+      if (!editingAppointment) return;
+      
+      const newModality = document.getElementById('edit-modality').value;
+      const newDate = document.getElementById('edit-date').value;
+      const newTime = document.getElementById('edit-time').value;
+      
+      if (!newDate || !newTime) {
+        alert('Por favor seleccioná fecha y hora');
+        return;
+      }
+      
+      if (isSlotBooked(newDate, newTime, editingAppointment.id)) {
+        alert('Ese horario ya está reservado por otro paciente');
+        return;
+      }
+      
+      try {
+        const { error } = await supabaseClient
+          .from('appointments')
+          .update({
+            modality: newModality,
+            appointment_date: newDate,
+            appointment_time: newTime
+          })
+          .eq('id', editingAppointment.id);
+        
+        if (error) {
+          alert('Error al actualizar: ' + error.message);
+          return;
+        }
+        
+        const dayConfig = getDayConfig(newDate);
+        
+        const emailData = {
+          _subject: `Turno modificado: ${editingAppointment.full_name}`,
+          Nombre: editingAppointment.full_name,
+          Email: editingAppointment.email,
+          Teléfono: editingAppointment.phone,
+          Modalidad: newModality === 'virtual' ? 'Virtual' : 'Presencial',
+          Fecha: newDate,
+          Hora: newTime,
+          Direccion: newModality === 'presencial' ? (dayConfig.address || 'Consultorio') : 'Virtual (videollamada)',
+          Motivo: 'Turno reprogramado por el profesional',
+          _replyto: editingAppointment.email
+        };
+
+        fetch(FORMSPREE_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(emailData)
+        }).catch(err => console.error('Error enviando email:', err));
+        
+        closeEditModal();
+        loadAppointments();
+        loadBookedSlots();
+        
+        alert('Turno actualizado correctamente');
+        
+      } catch (err) {
+        alert('Error de conexión');
+      }
+    }
+
+    async function deleteAppointment(id) {
+      if (!confirm('¿Estás segura de que querés cancelar este turno?')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('appointments')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          alert('Error al eliminar: ' + error.message);
+          return;
+        }
+
+        loadAppointments();
+        loadBookedSlots();
+      } catch (err) {
+        alert('Error de conexión');
+      }
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAvailability();
+      loadBookedSlots();
+    });
+  </script>
+</body>
+</html>
