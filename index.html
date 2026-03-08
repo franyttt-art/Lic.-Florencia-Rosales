@@ -193,12 +193,6 @@
       background-color: #dbeafe;
       border-color: #3b82f6;
     }
-    .time-input-group {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
   </style>
 </head>
 <body class="antialiased">
@@ -565,12 +559,9 @@
 
                 <div class="mb-4">
                   <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Horarios Disponibles</label>
-                  <div id="time-slots-config">
+                  <div id="time-slots-config" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
                     <!-- Se generan dinámicamente -->
                   </div>
-                  <button onclick="addTimeSlot()" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
-                    <i class="fas fa-plus mr-1"></i> Agregar horario
-                  </button>
                 </div>
 
                 <button onclick="saveDayConfig()" class="w-full px-6 py-3 bg-gray-800 text-white rounded-full font-medium hover:bg-gray-700">
@@ -698,7 +689,7 @@
     let bookedSlots = [];
     let editingAppointment = null;
     let selectedConfigDate = null;
-    let dayAvailability = {}; // Configuración cargada de Supabase
+    let dayAvailability = {};
 
     // Slots de tiempo para configurar
     const defaultTimeSlots = [
@@ -720,7 +711,6 @@
           return;
         }
         
-        // Convertir a objeto fácil de usar: { '2024-01-15': { available: true, times: [...], modality: '...', address: '...' } }
         dayAvailability = {};
         data.forEach(day => {
           dayAvailability[day.date] = {
@@ -776,6 +766,67 @@
       }
     }
 
+    // Funciones de selección de modalidad y pasos
+    function selectModality(modality) {
+      selectedModality = modality;
+      selectedDate = null;
+      selectedTime = null;
+
+      document.querySelectorAll('.modalidad-btn').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById(`btn-${modality}`).classList.add('selected');
+
+      const btn = document.getElementById('btn-next-1');
+      btn.disabled = false;
+      btn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+      btn.classList.add('bg-gray-800', 'hover:bg-gray-700');
+    }
+
+    function nextStep(step) {
+      if (step === 2 && !selectedModality) return;
+      if (step === 3 && (!selectedDate || !selectedTime)) return;
+
+      document.getElementById(`step${currentStep}`).classList.add('hidden');
+      document.getElementById(`step${step}`).classList.remove('hidden');
+
+      document.getElementById(`step${currentStep}-ind`).classList.remove('active');
+      document.getElementById(`step${currentStep}-ind`).classList.add('completed');
+      document.getElementById(`step${currentStep}-ind`).innerHTML = '<i class="fas fa-check text-xs"></i>';
+
+      if (document.getElementById(`line${currentStep}`)) {
+        document.getElementById(`line${currentStep}`).classList.remove('bg-gray-300');
+        document.getElementById(`line${currentStep}`).classList.add('bg-gray-800');
+      }
+
+      document.getElementById(`step${step}-ind`).classList.remove('text-gray-400', 'border-gray-300');
+      document.getElementById(`step${step}-ind`).classList.add('active', 'border-gray-800');
+
+      currentStep = step;
+
+      if (step === 2) {
+        document.getElementById('modality-display').textContent = `Modalidad: ${selectedModality === 'virtual' ? 'Virtual' : 'Presencial'}`;
+        renderCalendar();
+        renderTimeSlots();
+      } else if (step === 3) {
+        updateConfirmation();
+      }
+    }
+
+    function prevStep(step) {
+      document.getElementById(`step${currentStep}`).classList.add('hidden');
+      document.getElementById(`step${step}`).classList.remove('hidden');
+
+      document.getElementById(`step${step}-ind`).classList.remove('completed');
+      document.getElementById(`step${step}-ind`).classList.add('active');
+      document.getElementById(`step${step}-ind`).innerHTML = step;
+
+      if (document.getElementById(`line${step}`)) {
+        document.getElementById(`line${step}`).classList.remove('bg-gray-800');
+        document.getElementById(`line${step}`).classList.add('bg-gray-300');
+      }
+
+      currentStep = step;
+    }
+
     // Funciones del calendario de pacientes
     async function renderCalendar() {
       await loadAvailability();
@@ -807,7 +858,6 @@
         const matchesModality = selectedModality && dayConfig.available && 
           (selectedModality === dayConfig.modality || dayConfig.modality === 'both');
         
-        // Contar cuántos slots disponibles quedan
         let availableSlots = 0;
         if (hasAvailability && matchesModality) {
           dayConfig.times.forEach(time => {
@@ -824,7 +874,7 @@
         } else if (hasAvailability && matchesModality && availableSlots > 0) {
           classes += 'available ';
         } else if (hasAvailability && matchesModality && availableSlots === 0) {
-          classes += 'booked '; // Completamente ocupado
+          classes += 'booked ';
         } else {
           classes += 'text-gray-300 cursor-not-allowed ';
         }
@@ -882,7 +932,6 @@
         return;
       }
 
-      // Filtrar solo los horarios de la modalidad seleccionada o "both"
       if (selectedModality !== dayConfig.modality && dayConfig.modality !== 'both') {
         container.innerHTML = '<p class="text-gray-400 text-sm">Esta fecha no está disponible para esta modalidad</p>';
         locationInfo.classList.add('hidden');
@@ -910,7 +959,6 @@
 
       container.innerHTML = html;
 
-      // Mostrar dirección si es presencial
       if (selectedModality === 'presencial' && dayConfig.address) {
         selectedLocation.textContent = dayConfig.address;
         locationInfo.classList.remove('hidden');
@@ -934,8 +982,151 @@
       }
     }
 
-    // Resto de funciones (nextStep, prevStep, updateConfirmation, submitBooking, etc.) se mantienen similares
-    // pero usando la nueva lógica de disponibilidad...
+    function updateConfirmation() {
+      document.getElementById('confirm-modality').textContent = selectedModality === 'virtual' ? 'Virtual' : 'Presencial';
+
+      const dateStr = selectedDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      document.getElementById('confirm-date').textContent = dateStr;
+      document.getElementById('confirm-time').textContent = selectedTime + ' hs';
+
+      const wrap = document.getElementById('confirm-location-wrap');
+      const loc = document.getElementById('confirm-location');
+
+      if (selectedModality === 'presencial') {
+        const dayConfig = getDayConfig(selectedDate);
+        wrap.classList.remove('hidden');
+        loc.textContent = dayConfig.address || 'Consultorio (dirección no especificada)';
+      } else {
+        wrap.classList.add('hidden');
+        loc.textContent = '';
+      }
+    }
+
+    async function submitBooking() {
+      const form = document.getElementById('bookingForm');
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      if (isSlotBooked(selectedDate, selectedTime)) {
+        alert('Lo sentimos, este turno acaba de ser reservado por otra persona. Por favor selecciona otro horario.');
+        renderTimeSlots();
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit');
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-not-allowed');
+      btn.innerHTML = 'Enviando... <i class="fas fa-spinner fa-spin ml-2"></i>';
+
+      const dayConfig = getDayConfig(selectedDate);
+
+      const appointmentData = {
+        full_name: document.getElementById('fullName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        reason: document.getElementById('reason').value.trim(),
+        modality: selectedModality,
+        appointment_date: selectedDate.toISOString().split('T')[0],
+        appointment_time: selectedTime,
+        status: 'pending'
+      };
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('appointments')
+          .insert([appointmentData]);
+
+        if (error) {
+          if (error.code === '23505') {
+            alert('Este turno ya fue reservado. Por favor selecciona otro horario.');
+            renderTimeSlots();
+          } else {
+            alert('Error al guardar el turno: ' + error.message);
+          }
+          btn.disabled = false;
+          btn.classList.remove('opacity-70', 'cursor-not-allowed');
+          btn.innerHTML = original;
+          return;
+        }
+
+        // Enviar notificación por email
+        const emailData = {
+          _subject: `Nuevo turno: ${appointmentData.full_name} - ${appointmentData.appointment_date}`,
+          Nombre: appointmentData.full_name,
+          Email: appointmentData.email,
+          Teléfono: appointmentData.phone,
+          Modalidad: appointmentData.modality === 'virtual' ? 'Virtual' : 'Presencial',
+          Fecha: appointmentData.appointment_date,
+          Hora: appointmentData.appointment_time,
+          Direccion: appointmentData.modality === 'presencial' ? (dayConfig.address || 'Consultorio') : 'Virtual (videollamada)',
+          Motivo: appointmentData.reason || 'No especificado',
+          _replyto: appointmentData.email
+        };
+
+        fetch(FORMSPREE_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(emailData)
+        }).catch(err => console.error('Error enviando email:', err));
+
+        document.getElementById('step3').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+        
+        await loadBookedSlots();
+        
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error de conexión. Por favor intenta nuevamente.');
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        btn.innerHTML = original;
+      }
+    }
+
+    function resetBooking() {
+      selectedModality = null;
+      selectedDate = null;
+      selectedTime = null;
+      currentStep = 1;
+      currentDate = new Date();
+
+      document.getElementById('success').classList.add('hidden');
+      document.getElementById('step1').classList.remove('hidden');
+
+      document.querySelectorAll('.step-indicator').forEach((el, idx) => {
+        el.className = 'step-indicator w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold';
+        if (idx === 0) {
+          el.classList.add('active', 'border-gray-800');
+          el.innerHTML = '1';
+        } else {
+          el.classList.add('border-gray-300', 'text-gray-400');
+          el.innerHTML = idx + 1;
+        }
+      });
+      document.querySelectorAll('[id^="line"]').forEach(el => {
+        el.className = 'flex-1 h-px bg-gray-300 mx-2';
+      });
+
+      document.getElementById('btn-next-1').disabled = true;
+      document.getElementById('btn-next-1').className = 'px-8 py-3 bg-gray-300 text-white rounded-full font-medium cursor-not-allowed';
+
+      document.querySelectorAll('.modalidad-btn').forEach(btn => btn.classList.remove('selected'));
+
+      document.getElementById('bookingForm').reset();
+      document.getElementById('time-slots-container').innerHTML = '<p class="text-gray-400 text-sm italic">Seleccioná una fecha primero</p>';
+    }
 
     // ADMIN FUNCTIONS
     function toggleAdmin() {
@@ -971,6 +1162,68 @@
       document.getElementById(`admin-tab-${tab}`).classList.remove('hidden');
       document.getElementById(`tab-${tab}`).classList.add('border-gray-800', 'font-semibold');
       document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
+    }
+
+    async function loadAppointments() {
+      const container = document.getElementById('appointments-list');
+      container.innerHTML = '<p class="text-gray-400 text-center py-8">Cargando turnos...</p>';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('appointments')
+          .select('*')
+          .order('appointment_date', { ascending: true })
+          .order('appointment_time', { ascending: true });
+
+        if (error) {
+          container.innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<p class="text-gray-400 text-center py-8">No hay turnos reservados</p>';
+          return;
+        }
+
+        let html = '';
+        data.forEach(apt => {
+          const date = new Date(apt.appointment_date);
+          const dateStr = date.toLocaleDateString('es-ES', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+          });
+          
+          html += `
+            <div class="appointment-card p-4 rounded-lg flex justify-between items-center">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold text-gray-800">${dateStr}</span>
+                  <span class="text-gray-600">${apt.appointment_time} hs</span>
+                  <span class="px-2 py-1 rounded text-xs ${apt.modality === 'virtual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                    ${apt.modality === 'virtual' ? 'Virtual' : 'Presencial'}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-700 font-medium">${apt.full_name}</p>
+                <p class="text-xs text-gray-500">${apt.phone} | ${apt.email}</p>
+                ${apt.reason ? `<p class="text-xs text-gray-400 mt-1">${apt.reason}</p>` : ''}
+              </div>
+              <div class="flex gap-2">
+                <button onclick="openEditModal('${apt.id}')" class="btn-edit" title="Editar turno">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteAppointment('${apt.id}')" class="btn-danger" title="Eliminar turno">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = '<p class="text-red-500 text-center">Error de conexión</p>';
+      }
     }
 
     // Calendario de administración
@@ -1061,12 +1314,11 @@
       const container = document.getElementById('time-slots-config');
       container.innerHTML = '';
       
-      // Mostrar checkboxes para cada horario
       defaultTimeSlots.forEach(time => {
         const isSelected = selectedTimes.includes(time);
         
         const div = document.createElement('div');
-        div.className = 'flex items-center gap-2 mb-2';
+        div.className = 'flex items-center gap-2';
         div.innerHTML = `
           <input type="checkbox" id="time-${time}" value="${time}" ${isSelected ? 'checked' : ''} 
             class="w-4 h-4 text-gray-800 focus:ring-gray-800">
@@ -1076,11 +1328,6 @@
       });
     }
 
-    function addTimeSlot() {
-      // Esta función ya no es necesaria con checkboxes, pero la dejamos por si queremos agregar horarios personalizados
-      alert('Seleccioná los horarios disponibles de la lista. Si necesitás un horario especial, contactá al desarrollador.');
-    }
-
     async function saveDayConfig() {
       if (!selectedConfigDate) return;
       
@@ -1088,7 +1335,6 @@
       const modality = document.getElementById('config-modality').value;
       const address = document.getElementById('config-address').value;
       
-      // Recoger horarios seleccionados
       const selectedTimes = [];
       defaultTimeSlots.forEach(time => {
         const checkbox = document.getElementById(`time-${time}`);
@@ -1126,7 +1372,6 @@
           return;
         }
         
-        // Actualizar caché local
         dayAvailability[dateStr] = {
           available: isAvailable,
           times: selectedTimes,
@@ -1142,13 +1387,50 @@
       }
     }
 
-    // Resto de funciones (loadAppointments, openEditModal, etc.) se mantienen igual...
+    // Edit modal functions
+    async function openEditModal(appointmentId) {
+      const { data, error } = await supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('id', appointmentId)
+        .single();
+      
+      if (error || !data) {
+        alert('Error al cargar el turno');
+        return;
+      }
+      
+      editingAppointment = data;
+      
+      document.getElementById('edit-patient-name').value = data.full_name;
+      document.getElementById('edit-modality').value = data.modality;
+      document.getElementById('edit-date').value = data.appointment_date;
+      
+      await updateEditTimeSlots(data.appointment_date, data.modality, data.appointment_time);
+      
+      document.getElementById('edit-modal').classList.add('active');
+    }
 
-    // Inicializar
-    document.addEventListener('DOMContentLoaded', () => {
-      loadAvailability();
-      loadBookedSlots();
-    });
-  </script>
-</body>
-</html>
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+      editingAppointment = null;
+    }
+
+    async function updateEditTimeSlots(dateStr, modality, currentTime) {
+      const date = new Date(dateStr);
+      const dayConfig = getDayConfig(date);
+      
+      const select = document.getElementById('edit-time');
+      select.innerHTML = '<option value="">Seleccionar hora...</option>';
+      
+      let slots = [];
+      if (dayConfig.available && dayConfig.times.length > 0) {
+        slots = dayConfig.times;
+      } else {
+        // Si no hay configuración, usar horarios por defecto
+        slots = defaultTimeSlots;
+      }
+      
+      slots.forEach(time => {
+        const isBooked = isSlotBooked(dateStr, time, editingAppointment?.id);
+        const isCurrent = time ===
