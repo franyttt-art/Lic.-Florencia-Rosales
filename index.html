@@ -222,14 +222,10 @@
         <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
       </div>
       
-      <!-- Menú desktop y mobile (unificado) -->
-      <div class="flex items-center space-x-4 md:space-x-8 text-xs md:text-sm uppercase tracking-wider">
-        <a href="#inicio" class="hidden md:block hover:text-beige-dark smooth-transition">Inicio</a>
-        <a href="#agenda" class="px-4 md:px-6 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 smooth-transition">Agendar Turno</a>
-        <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800 flex items-center gap-1">
-          <i class="fas fa-lock"></i> <span class="hidden sm:inline">Admin</span>
-        </button>
-      </div>
+      <!-- Solo botón Admin (visible en todos los dispositivos) -->
+      <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm uppercase tracking-wider">
+        <i class="fas fa-lock"></i> <span class="hidden sm:inline">Admin</span>
+      </button>
     </div>
   </div>
 </nav>
