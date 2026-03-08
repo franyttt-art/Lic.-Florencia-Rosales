@@ -103,6 +103,64 @@
     .btn-danger:hover {
       background: #b91c1c;
     }
+    .btn-edit {
+      background: #2563eb;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+    }
+    .btn-edit:hover {
+      background: #1d4ed8;
+    }
+    .btn-save {
+      background: #059669;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .btn-save:hover {
+      background: #047857;
+    }
+    
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.9);
+      transition: all 0.3s ease;
+    }
+    .modal-overlay.active .modal-content {
+      transform: scale(1);
+    }
   </style>
 </head>
 <body class="antialiased">
@@ -163,8 +221,8 @@
           </div>
           <h3 class="serif text-2xl text-gray-800 mb-2">Modalidad Presencial</h3>
           <p class="text-beige-dark mb-4 text-sm uppercase tracking-wider">Consultorio</p>
-          <p class="text-gray-700 text-sm leading-relaxed">
-            153 e 518 y 519, La Plata, Melchor Romero
+          <p class="text-gray-700 text-sm leading-relaxed" id="display-address">
+            Cargando dirección...
           </p>
         </div>
 
@@ -220,7 +278,7 @@
               <i class="fas fa-building"></i>
             </div>
             <h5 class="serif text-xl mb-2">Presencial</h5>
-            <p class="text-sm text-gray-500">Consultorio en Melchor Romero</p>
+            <p class="text-sm text-gray-500">Consultorio presencial</p>
           </button>
         </div>
 
@@ -389,6 +447,24 @@
 
         <!-- Admin Dashboard -->
         <div id="admin-dashboard" class="hidden">
+          
+          <!-- Configuración de Dirección -->
+          <div class="bg-beige-light rounded-2xl p-6 mb-6 border border-beige">
+            <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+              <i class="fas fa-map-marker-alt text-gray-600"></i>
+              Dirección del Consultorio
+            </h4>
+            <div class="flex gap-3">
+              <input type="text" id="admin-address" 
+                class="input-elegant flex-1 px-4 py-3 rounded-xl" 
+                placeholder="Ej: 153 e 518 y 519, La Plata, Melchor Romero">
+              <button onclick="saveAddress()" class="btn-save">
+                <i class="fas fa-save mr-1"></i> Guardar
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Esta dirección se mostrará en la página para los turnos presenciales.</p>
+          </div>
+
           <div class="flex justify-between items-center mb-6">
             <h4 class="text-lg font-semibold">Turnos Reservados</h4>
             <button onclick="loadAppointments()" class="text-sm text-gray-600 hover:text-gray-800">
@@ -403,6 +479,54 @@
       </div>
     </div>
   </section>
+
+  <!-- EDIT MODAL -->
+  <div id="edit-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h4 class="serif text-2xl text-gray-800">Editar Turno</h4>
+        <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-800">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Paciente</label>
+          <input type="text" id="edit-patient-name" disabled class="input-elegant w-full px-4 py-3 rounded-xl bg-gray-100">
+        </div>
+        
+        <div>
+          <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Modalidad</label>
+          <select id="edit-modality" class="input-elegant w-full px-4 py-3 rounded-xl">
+            <option value="virtual">Virtual</option>
+            <option value="presencial">Presencial</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Nueva Fecha</label>
+          <input type="date" id="edit-date" required class="input-elegant w-full px-4 py-3 rounded-xl">
+        </div>
+        
+        <div>
+          <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Nueva Hora</label>
+          <select id="edit-time" required class="input-elegant w-full px-4 py-3 rounded-xl">
+            <option value="">Seleccionar hora...</option>
+          </select>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button onclick="closeEditModal()" class="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-600 rounded-full hover:border-gray-800 hover:text-gray-800 smooth-transition">
+            Cancelar
+          </button>
+          <button onclick="saveEdit()" class="flex-1 px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-700 smooth-transition">
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- CONTACTO -->
   <section class="py-20 bg-white border-t border-beige">
@@ -435,10 +559,10 @@
       <p class="text-gray-500 text-sm mb-8">Atención a niños, adolescentes y adultos</p>
 
       <div class="flex justify-center gap-6 mb-8">
-        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
+        <a href="https://www.instagram.com/fmrosales_?igsh=MTNybWttaWlxdnh1eQ==" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
           <i class="fab fa-instagram"></i>
         </a>
-        <a href="#" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
+        <a href="https://wa.me/5492214547057" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
           <i class="fab fa-whatsapp"></i>
         </a>
         <a href="mailto:FlorPsico@outlook.es" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
@@ -455,7 +579,7 @@
     const SUPABASE_URL = "https://yodefzidtoluudozgces.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZGVmemlkdG9sdXVkb3pnY2VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDEwOTUsImV4cCI6MjA4ODM3NzA5NX0.ZiHokkUpT7s1CebAl9roYGj39mN5r8lu17dz2gmrFCU";
     const FORMSPREE_ENDPOINT = "https://formspree.io/f/xykdleee";
-    const ADMIN_PASSWORD = "flor2024";
+    const ADMIN_PASSWORD = "Apolito2026";
 
     // Inicializar cliente Supabase
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -467,6 +591,8 @@
     let selectedTime = null;
     let currentDate = new Date();
     let bookedSlots = [];
+    let editingAppointment = null;
+    let currentAddress = "153 e 518 y 519, La Plata, Melchor Romero"; // Dirección por defecto
 
     // Configuración de horarios
     const slotMinutes = 30;
@@ -481,7 +607,6 @@
       },
       presencial: {
         label: 'Presencial',
-        location: "153 e 518 y 519, La Plata, Melchor Romero",
         windowsByDay: {
           1: [{ start: "13:00", end: "18:00" }],
           3: [{ start: "14:00", end: "19:00" }],
@@ -524,12 +649,68 @@
       return getDayWindows(modality, dayOfWeek).length > 0;
     }
 
+    // Cargar configuración desde Supabase
+    async function loadSettings() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('settings')
+          .select('*')
+          .eq('key', 'office_address')
+          .single();
+        
+        if (data && data.value) {
+          currentAddress = data.value;
+        }
+        
+        updateAddressDisplay();
+      } catch (err) {
+        console.error('Error cargando configuración:', err);
+        updateAddressDisplay();
+      }
+    }
+
+    // Actualizar visualización de la dirección
+    function updateAddressDisplay() {
+      document.getElementById('display-address').textContent = currentAddress;
+      config.presencial.location = currentAddress;
+    }
+
+    // Guardar dirección en Supabase
+    async function saveAddress() {
+      const newAddress = document.getElementById('admin-address').value.trim();
+      if (!newAddress) {
+        alert('Por favor ingresá una dirección');
+        return;
+      }
+
+      try {
+        const { error } = await supabaseClient
+          .from('settings')
+          .upsert({ 
+            key: 'office_address', 
+            value: newAddress,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'key' });
+
+        if (error) {
+          alert('Error al guardar: ' + error.message);
+          return;
+        }
+
+        currentAddress = newAddress;
+        updateAddressDisplay();
+        alert('Dirección actualizada correctamente');
+      } catch (err) {
+        alert('Error de conexión');
+      }
+    }
+
     // Cargar turnos reservados desde Supabase
     async function loadBookedSlots() {
       try {
         const { data, error } = await supabaseClient
           .from('appointments')
-          .select('appointment_date, appointment_time, modality');
+          .select('appointment_date, appointment_time, modality, id');
         
         if (error) {
           console.error('Error cargando turnos:', error);
@@ -542,13 +723,14 @@
       }
     }
 
-    // Verificar si un slot está reservado
-    function isSlotBooked(date, time, modality) {
-      const dateStr = date.toISOString().split('T')[0];
+    // Verificar si un slot está reservado (excluyendo el turno que se está editando)
+    function isSlotBooked(date, time, modality, excludeId = null) {
+      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
       return bookedSlots.some(slot => 
         slot.appointment_date === dateStr && 
         slot.appointment_time === time &&
-        slot.modality === modality
+        slot.modality === modality &&
+        slot.id !== excludeId
       );
     }
 
@@ -710,7 +892,7 @@
 
       if (selectedModality === 'presencial') {
         html += `<p class="text-xs text-gray-500 mt-4 text-center">
-          Dirección del consultorio: <span class="font-semibold">${config.presencial.location}</span>
+          Dirección del consultorio: <span class="font-semibold">${currentAddress}</span>
         </p>`;
       }
 
@@ -750,7 +932,7 @@
 
       if (selectedModality === 'presencial') {
         wrap.classList.remove('hidden');
-        loc.textContent = config.presencial.location;
+        loc.textContent = currentAddress;
       } else {
         wrap.classList.add('hidden');
         loc.textContent = '';
@@ -816,6 +998,7 @@
           Fecha: appointmentData.appointment_date,
           Hora: appointmentData.appointment_time,
           Motivo: appointmentData.reason || 'No especificado',
+          Direccion: appointmentData.modality === 'presencial' ? currentAddress : 'Virtual (videollamada)',
           _replyto: appointmentData.email
         };
 
@@ -894,6 +1077,7 @@
       if (password === ADMIN_PASSWORD) {
         document.getElementById('admin-login').classList.add('hidden');
         document.getElementById('admin-dashboard').classList.remove('hidden');
+        document.getElementById('admin-address').value = currentAddress;
         loadAppointments();
       } else {
         document.getElementById('login-error').classList.remove('hidden');
@@ -944,9 +1128,14 @@
                 <p class="text-xs text-gray-500">${apt.phone} | ${apt.email}</p>
                 ${apt.reason ? `<p class="text-xs text-gray-400 mt-1">${apt.reason}</p>` : ''}
               </div>
-              <button onclick="deleteAppointment('${apt.id}')" class="btn-danger ml-4">
-                <i class="fas fa-trash"></i>
-              </button>
+              <div class="flex gap-2">
+                <button onclick="openEditModal('${apt.id}')" class="btn-edit" title="Editar turno">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteAppointment('${apt.id}')" class="btn-danger" title="Eliminar turno">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
           `;
         });
@@ -954,6 +1143,141 @@
         container.innerHTML = html;
       } catch (err) {
         container.innerHTML = '<p class="text-red-500 text-center">Error de conexión</p>';
+      }
+    }
+
+    // EDIT MODAL FUNCTIONS
+    async function openEditModal(appointmentId) {
+      const { data, error } = await supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('id', appointmentId)
+        .single();
+      
+      if (error || !data) {
+        alert('Error al cargar el turno');
+        return;
+      }
+      
+      editingAppointment = data;
+      
+      document.getElementById('edit-patient-name').value = data.full_name;
+      document.getElementById('edit-modality').value = data.modality;
+      document.getElementById('edit-date').value = data.appointment_date;
+      
+      await updateEditTimeSlots(data.appointment_date, data.modality, data.appointment_time);
+      
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+      editingAppointment = null;
+    }
+
+    async function updateEditTimeSlots(dateStr, modality, currentTime) {
+      const date = new Date(dateStr);
+      const dow = date.getDay();
+      const slots = buildSlotsForDay(modality, dow, slotMinutes);
+      
+      const select = document.getElementById('edit-time');
+      select.innerHTML = '<option value="">Seleccionar hora...</option>';
+      
+      slots.forEach(time => {
+        const isBooked = isSlotBooked(dateStr, time, modality, editingAppointment?.id);
+        const isCurrent = time === currentTime;
+        
+        const option = document.createElement('option');
+        option.value = time;
+        option.textContent = time + (isBooked ? ' (Ocupado)' : '') + (isCurrent ? ' - Actual' : '');
+        
+        if (isBooked && !isCurrent) {
+          option.disabled = true;
+          option.style.color = '#999';
+        } else if (isCurrent) {
+          option.selected = true;
+          option.style.fontWeight = 'bold';
+        }
+        
+        select.appendChild(option);
+      });
+    }
+
+    document.getElementById('edit-date')?.addEventListener('change', async function() {
+      if (!editingAppointment) return;
+      const modality = document.getElementById('edit-modality').value;
+      await updateEditTimeSlots(this.value, modality, null);
+    });
+
+    document.getElementById('edit-modality')?.addEventListener('change', async function() {
+      if (!editingAppointment) return;
+      const date = document.getElementById('edit-date').value;
+      await updateEditTimeSlots(date, this.value, null);
+    });
+
+    async function saveEdit() {
+      if (!editingAppointment) return;
+      
+      const newModality = document.getElementById('edit-modality').value;
+      const newDate = document.getElementById('edit-date').value;
+      const newTime = document.getElementById('edit-time').value;
+      
+      if (!newDate || !newTime) {
+        alert('Por favor seleccioná fecha y hora');
+        return;
+      }
+      
+      if (isSlotBooked(newDate, newTime, newModality, editingAppointment.id)) {
+        alert('Ese horario ya está reservado por otro paciente');
+        return;
+      }
+      
+      try {
+        const { error } = await supabaseClient
+          .from('appointments')
+          .update({
+            modality: newModality,
+            appointment_date: newDate,
+            appointment_time: newTime
+          })
+          .eq('id', editingAppointment.id);
+        
+        if (error) {
+          alert('Error al actualizar: ' + error.message);
+          return;
+        }
+        
+        // Enviar notificación de cambio por email
+        const emailData = {
+          _subject: `Turno modificado: ${editingAppointment.full_name}`,
+          Nombre: editingAppointment.full_name,
+          Email: editingAppointment.email,
+          Teléfono: editingAppointment.phone,
+          Modalidad: newModality === 'virtual' ? 'Virtual' : 'Presencial',
+          Fecha: newDate,
+          Hora: newTime,
+          Direccion: newModality === 'presencial' ? currentAddress : 'Virtual (videollamada)',
+          Motivo: 'Turno reprogramado por el profesional',
+          _replyto: editingAppointment.email
+        };
+
+        fetch(FORMSPREE_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(emailData)
+        }).catch(err => console.error('Error enviando email:', err));
+        
+        closeEditModal();
+        loadAppointments();
+        loadBookedSlots();
+        
+        alert('Turno actualizado correctamente');
+        
+      } catch (err) {
+        alert('Error de conexión');
       }
     }
 
@@ -980,6 +1304,7 @@
 
     // Inicializar al cargar
     document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
       loadBookedSlots();
     });
   </script>
