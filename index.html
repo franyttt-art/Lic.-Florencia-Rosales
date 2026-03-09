@@ -50,6 +50,7 @@
     .calendar-day.disabled { color: #d4cfc7; cursor: not-allowed; }
     .calendar-day.booked { background-color: #fee2e2; color: #991b1b; cursor: not-allowed; text-decoration: line-through; }
     .calendar-day.available { background-color: #dcfce7; color: #166534; font-weight: 600; }
+    .calendar-day.mixed { background: linear-gradient(135deg, #dbeafe 50%, #dcfce7 50%); color: #1e40af; font-weight: 600; }
 
     .time-slot { transition: all 0.2s ease; }
     .time-slot:hover:not(.disabled):not(.booked) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -131,30 +132,6 @@
     .btn-save:hover {
       background: #047857;
     }
-    .btn-config {
-      background: #7c3aed;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      margin-right: 0.5rem;
-    }
-    .btn-config:hover {
-      background: #6d28d9;
-    }
-    .btn-delete-config {
-      background: #dc2626;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      margin-top: 0.5rem;
-    }
-    .btn-delete-config:hover {
-      background: #b91c1c;
-    }
     
     /* Modal styles */
     .modal-overlay {
@@ -205,30 +182,66 @@
       background-color: #dcfce7;
       border-color: #22c55e;
     }
-    .admin-calendar-day.has-slots {
+    .admin-calendar-day.has-virtual {
       background-color: #dbeafe;
       border-color: #3b82f6;
+    }
+    .admin-calendar-day.has-presencial {
+      background-color: #dcfce7;
+      border-color: #22c55e;
+    }
+    .admin-calendar-day.has-both {
+      background: linear-gradient(135deg, #dbeafe 50%, #dcfce7 50%);
+      border-color: #8b5cf6;
+    }
+
+    .modality-section {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .modality-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+    .virtual-badge {
+      background-color: #dbeafe;
+      color: #1e40af;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+    }
+    .presencial-badge {
+      background-color: #dcfce7;
+      color: #166534;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
     }
   </style>
 </head>
 <body class="antialiased">
 
   <!-- NAV -->
-<nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-beige">
-  <div class="max-w-6xl mx-auto px-6 py-4">
-    <div class="flex justify-between items-center">
-      <div class="text-center">
-        <h1 class="handwritten text-3xl text-gray-800">Florencia Rosales</h1>
-        <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
+  <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-beige">
+    <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="flex justify-between items-center">
+        <div class="text-center">
+          <h1 class="handwritten text-3xl text-gray-800">Florencia Rosales</h1>
+          <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
+        </div>
+        
+        <!-- Solo botón Admin (visible en todos los dispositivos) -->
+        <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm uppercase tracking-wider">
+          <i class="fas fa-lock"></i> <span class="hidden sm:inline">Admin</span>
+        </button>
       </div>
-      
-      <!-- Solo botón Admin (visible en todos los dispositivos) -->
-      <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm uppercase tracking-wider">
-        <i class="fas fa-lock"></i> <span class="hidden sm:inline">Admin</span>
-      </button>
     </div>
-  </div>
-</nav>
+  </nav>
 
   <!-- HERO -->
   <section id="inicio" class="pt-32 pb-20 px-6 leaf-shadow">
@@ -527,7 +540,7 @@
             <div class="mb-6">
               <h4 class="text-lg font-semibold mb-4">Configurar Disponibilidad de Turnos</h4>
               <p class="text-sm text-gray-600 mb-4">
-                Seleccioná los días y configurá los horarios disponibles. Los pacientes solo podrán agendar en los días que actives acá.
+                Seleccioná los días y configurá los horarios disponibles. Podés tener ambas modalidades (virtual y presencial) en el mismo día con horarios diferentes.
               </p>
               
               <div class="flex justify-between items-center mb-4">
@@ -544,6 +557,22 @@
                 <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
               </div>
               <div class="grid grid-cols-7 gap-1" id="adminCalendar"></div>
+              
+              <!-- Leyenda -->
+              <div class="flex gap-4 mt-4 text-xs justify-center">
+                <div class="flex items-center gap-1">
+                  <div class="w-3 h-3 bg-blue-100 border border-blue-500 rounded"></div>
+                  <span>Virtual</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <div class="w-3 h-3 bg-green-100 border border-green-500 rounded"></div>
+                  <span>Presencial</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <div class="w-3 h-3 bg-gradient-to-br from-blue-100 to-green-100 border border-purple-500 rounded"></div>
+                  <span>Ambas</span>
+                </div>
+              </div>
             </div>
 
             <!-- Configuración del día seleccionado -->
@@ -555,48 +584,67 @@
                 </button>
               </div>
               
-              <div class="mb-4">
-                <label class="flex items-center gap-2 mb-4">
-                  <input type="checkbox" id="day-available" class="w-4 h-4" onchange="toggleDayAvailability()">
-                  <span class="font-medium">Día disponible para turnos</span>
-                </label>
-              </div>
-
-              <div id="time-config-section" class="hidden">
-                <div class="mb-4">
-                  <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Modalidad</label>
-                  <select id="config-modality" class="input-elegant w-full px-4 py-3 rounded-xl" onchange="updateConfigAddress()">
-                    <option value="virtual">Virtual (Videollamada)</option>
-                    <option value="presencial">Presencial (Consultorio)</option>
-                  </select>
+              <!-- SECCIÓN VIRTUAL -->
+              <div class="modality-section bg-blue-50">
+                <div class="modality-header">
+                  <i class="fas fa-video text-blue-600"></i>
+                  <span class="virtual-badge">Virtual</span>
+                  <label class="flex items-center gap-2 ml-auto">
+                    <input type="checkbox" id="virtual-available" onchange="toggleModalitySection('virtual')">
+                    <span class="text-sm font-normal">Activar</span>
+                  </label>
                 </div>
-
-                <div id="config-address-section" class="mb-4 hidden">
-                  <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Dirección del Consultorio</label>
-                  <input type="text" id="config-address" class="input-elegant w-full px-4 py-3 rounded-xl" placeholder="Ej: 153 e 518 y 519, La Plata">
-                </div>
-
-                <div class="mb-4">
-                  <label class="block text-sm uppercase tracking-wider text-gray-600 mb-2">Horarios Disponibles</label>
-                  <div id="time-slots-config" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                    <!-- Se generan dinámicamente -->
+                
+                <div id="virtual-config-content" class="hidden">
+                  <div class="mb-3">
+                    <label class="block text-xs uppercase tracking-wider text-gray-600 mb-2">Horarios Disponibles</label>
+                    <div id="virtual-time-slots" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                      <!-- Se generan dinámicamente -->
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div class="flex gap-3">
-                  <button onclick="saveDayConfig()" class="flex-1 px-6 py-3 bg-gray-800 text-white rounded-full font-medium hover:bg-gray-700">
-                    <i class="fas fa-save mr-2"></i> Guardar Configuración
-                  </button>
+              <!-- SECCIÓN PRESENCIAL -->
+              <div class="modality-section bg-green-50">
+                <div class="modality-header">
+                  <i class="fas fa-building text-green-600"></i>
+                  <span class="presencial-badge">Presencial</span>
+                  <label class="flex items-center gap-2 ml-auto">
+                    <input type="checkbox" id="presencial-available" onchange="toggleModalitySection('presencial')">
+                    <span class="text-sm font-normal">Activar</span>
+                  </label>
                 </div>
+                
+                <div id="presencial-config-content" class="hidden">
+                  <div class="mb-3">
+                    <label class="block text-xs uppercase tracking-wider text-gray-600 mb-2">Dirección del Consultorio</label>
+                    <input type="text" id="presencial-address" class="input-elegant w-full px-3 py-2 rounded-lg text-sm" placeholder="Ej: 153 e 518 y 519, La Plata">
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label class="block text-xs uppercase tracking-wider text-gray-600 mb-2">Horarios Disponibles</label>
+                    <div id="presencial-time-slots" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                      <!-- Se generan dinámicamente -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BOTONES DE ACCIÓN -->
+              <div class="flex gap-3 mt-6">
+                <button onclick="saveDayConfig()" class="flex-1 px-6 py-3 bg-gray-800 text-white rounded-full font-medium hover:bg-gray-700">
+                  <i class="fas fa-save mr-2"></i> Guardar Configuración
+                </button>
               </div>
 
               <!-- BOTÓN PARA ELIMINAR CONFIGURACIÓN DEL DÍA -->
-              <div id="delete-config-section" class="mt-4 pt-4 border-t border-gray-200">
+              <div class="mt-4 pt-4 border-t border-gray-200">
                 <button onclick="deleteDayConfig()" class="w-full px-6 py-3 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
                   <i class="fas fa-trash-alt"></i> Eliminar Configuración de este Día
                 </button>
                 <p class="text-xs text-gray-500 mt-2 text-center">
-                  Esto eliminará todos los horarios configurados para este día. Los turnos ya reservados no se verán afectados.
+                  Esto eliminará todas las modalidades configuradas para este día.
                 </p>
               </div>
             </div>
@@ -745,11 +793,10 @@
         
         dayAvailability = {};
         data.forEach(day => {
+          // Nueva estructura: cada día puede tener virtual y presencial separados
           dayAvailability[day.date] = {
-            available: day.available,
-            times: day.times || [],
-            modality: day.modality || 'virtual',
-            address: day.address || ''
+            virtual: day.virtual || { available: false, times: [] },
+            presencial: day.presencial || { available: false, times: [], address: '' }
           };
         });
       } catch (err) {
@@ -757,17 +804,21 @@
       }
     }
 
-    // Verificar si un día tiene disponibilidad configurada
-    function isDayAvailable(date) {
+    // Verificar si un día tiene disponibilidad para una modalidad específica
+    function isDayAvailable(date, modality) {
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
       const config = dayAvailability[dateStr];
-      return config && config.available && config.times.length > 0;
+      if (!config || !config[modality]) return false;
+      return config[modality].available && config[modality].times.length > 0;
     }
 
     // Obtener configuración de un día
     function getDayConfig(date) {
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
-      return dayAvailability[dateStr] || { available: false, times: [], modality: 'virtual', address: '' };
+      return dayAvailability[dateStr] || { 
+        virtual: { available: false, times: [] }, 
+        presencial: { available: false, times: [], address: '' } 
+      };
     }
 
     // Verificar si un slot está reservado
@@ -886,33 +937,42 @@
         const isSelected = selectedDate && date.getTime() === selectedDate.getTime();
         
         const dayConfig = getDayConfig(date);
-        const hasAvailability = dayConfig.available && dayConfig.times.length > 0;
-        const matchesModality = selectedModality && dayConfig.available && 
-          (selectedModality === dayConfig.modality || dayConfig.modality === 'both');
+        const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.times.length > 0;
+        const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.times.length > 0;
         
+        // Contar slots disponibles para la modalidad seleccionada
         let availableSlots = 0;
-        if (hasAvailability && matchesModality) {
-          dayConfig.times.forEach(time => {
+        let totalSlots = 0;
+        
+        if (selectedModality === 'virtual' && hasVirtual) {
+          totalSlots = dayConfig.virtual.times.length;
+          dayConfig.virtual.times.forEach(time => {
+            if (!isSlotBooked(dateStr, time)) availableSlots++;
+          });
+        } else if (selectedModality === 'presencial' && hasPresencial) {
+          totalSlots = dayConfig.presencial.times.length;
+          dayConfig.presencial.times.forEach(time => {
             if (!isSlotBooked(dateStr, time)) availableSlots++;
           });
         }
 
         let classes = 'calendar-day p-3 rounded-lg text-center cursor-pointer text-sm ';
         
+        // Determinar estilo visual según disponibilidad
         if (isSelected) {
           classes += 'selected ';
         } else if (isPast) {
           classes += 'disabled ';
-        } else if (hasAvailability && matchesModality && availableSlots > 0) {
+        } else if (availableSlots > 0) {
           classes += 'available ';
-        } else if (hasAvailability && matchesModality && availableSlots === 0) {
+        } else if (totalSlots > 0 && availableSlots === 0) {
           classes += 'booked ';
         } else {
           classes += 'text-gray-300 cursor-not-allowed ';
         }
 
         let indicator = '';
-        if (hasAvailability && matchesModality) {
+        if (totalSlots > 0) {
           if (availableSlots > 0) {
             indicator = `<div class="text-xs mt-1 text-green-700">${availableSlots} libres</div>`;
           } else {
@@ -920,7 +980,7 @@
           }
         }
 
-        const canSelect = !isPast && hasAvailability && matchesModality && availableSlots > 0;
+        const canSelect = !isPast && availableSlots > 0;
 
         html += `<div class="${classes}" onclick="${canSelect ? `selectDate(${year}, ${month}, ${day})` : ''}">
           <div class="font-semibold">${day}</div>
@@ -957,21 +1017,18 @@
 
       const dateStr = selectedDate.toISOString().split('T')[0];
       const dayConfig = getDayConfig(selectedDate);
-
-      if (!dayConfig.available || dayConfig.times.length === 0) {
-        container.innerHTML = '<p class="text-gray-400 text-sm">No hay horarios configurados para este día</p>';
-        locationInfo.classList.add('hidden');
-        return;
-      }
-
-      if (selectedModality !== dayConfig.modality && dayConfig.modality !== 'both') {
-        container.innerHTML = '<p class="text-gray-400 text-sm">Esta fecha no está disponible para esta modalidad</p>';
+      
+      // Verificar si hay disponibilidad para la modalidad seleccionada
+      const modalityConfig = selectedModality === 'virtual' ? dayConfig.virtual : dayConfig.presencial;
+      
+      if (!modalityConfig.available || modalityConfig.times.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-sm">No hay horarios ${selectedModality === 'virtual' ? 'virtuales' : 'presenciales'} configurados para este día</p>`;
         locationInfo.classList.add('hidden');
         return;
       }
 
       let html = '<div class="grid grid-cols-3 gap-3">';
-      dayConfig.times.forEach(time => {
+      modalityConfig.times.forEach(time => {
         const isSelected = selectedTime === time;
         const isBooked = isSlotBooked(dateStr, time);
         
@@ -991,8 +1048,9 @@
 
       container.innerHTML = html;
 
-      if (selectedModality === 'presencial' && dayConfig.address) {
-        selectedLocation.textContent = dayConfig.address;
+      // Mostrar dirección si es presencial
+      if (selectedModality === 'presencial' && modalityConfig.address) {
+        selectedLocation.textContent = modalityConfig.address;
         locationInfo.classList.remove('hidden');
       } else {
         locationInfo.classList.add('hidden');
@@ -1033,7 +1091,7 @@
       if (selectedModality === 'presencial') {
         const dayConfig = getDayConfig(selectedDate);
         wrap.classList.remove('hidden');
-        loc.textContent = dayConfig.address || 'Consultorio (dirección no especificada)';
+        loc.textContent = dayConfig.presencial.address || 'Consultorio (dirección no especificada)';
       } else {
         wrap.classList.add('hidden');
         loc.textContent = '';
@@ -1099,7 +1157,7 @@
           Modalidad: appointmentData.modality === 'virtual' ? 'Virtual' : 'Presencial',
           Fecha: appointmentData.appointment_date,
           Hora: appointmentData.appointment_time,
-          Direccion: appointmentData.modality === 'presencial' ? (dayConfig.address || 'Consultorio') : 'Virtual (videollamada)',
+          Direccion: appointmentData.modality === 'presencial' ? (dayConfig.presencial.address || 'Consultorio') : 'Virtual (videollamada)',
           Motivo: appointmentData.reason || 'No especificado',
           _replyto: appointmentData.email
         };
@@ -1278,13 +1336,25 @@
         const dateStr = date.toISOString().split('T')[0];
         const dayConfig = getDayConfig(date);
         
+        const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.times.length > 0;
+        const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.times.length > 0;
+        
         let classes = 'admin-calendar-day p-2 rounded-lg text-center ';
         let content = `<div class="font-semibold mb-1">${day}</div>`;
         
-        if (dayConfig.available && dayConfig.times.length > 0) {
-          classes += 'has-slots ';
-          content += `<div class="text-xs text-blue-700">${dayConfig.times.length} horarios</div>`;
-          content += `<div class="text-xs text-gray-500">${dayConfig.modality === 'virtual' ? 'Virtual' : 'Presencial'}</div>`;
+        // Determinar clase según qué modalidades tiene
+        if (hasVirtual && hasPresencial) {
+          classes += 'has-both ';
+          content += `<div class="text-xs text-purple-700 font-semibold">Ambas</div>`;
+          content += `<div class="text-xs text-gray-500">${dayConfig.virtual.times.length + dayConfig.presencial.times.length} horarios</div>`;
+        } else if (hasVirtual) {
+          classes += 'has-virtual ';
+          content += `<div class="text-xs text-blue-700">Virtual</div>`;
+          content += `<div class="text-xs text-gray-500">${dayConfig.virtual.times.length} horarios</div>`;
+        } else if (hasPresencial) {
+          classes += 'has-presencial ';
+          content += `<div class="text-xs text-green-700">Presencial</div>`;
+          content += `<div class="text-xs text-gray-500">${dayConfig.presencial.times.length} horarios</div>`;
         } else {
           content += `<div class="text-xs text-gray-400">No disponible</div>`;
         }
@@ -1309,15 +1379,20 @@
       document.getElementById('selected-day-title').textContent = 
         `Configurar: ${selectedConfigDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`;
       
-      document.getElementById('day-available').checked = dayConfig.available;
-      document.getElementById('config-modality').value = dayConfig.modality || 'virtual';
-      document.getElementById('config-address').value = dayConfig.address || '';
+      // Cargar configuración VIRTUAL
+      document.getElementById('virtual-available').checked = dayConfig.virtual.available;
+      renderTimeSlotsConfig('virtual', dayConfig.virtual.times);
       
-      updateConfigAddress();
-      renderTimeSlotsConfig(dayConfig.times);
+      // Cargar configuración PRESENCIAL
+      document.getElementById('presencial-available').checked = dayConfig.presencial.available;
+      document.getElementById('presencial-address').value = dayConfig.presencial.address || '';
+      renderTimeSlotsConfig('presencial', dayConfig.presencial.times);
+      
+      // Mostrar/ocultar secciones según estado
+      toggleModalitySection('virtual');
+      toggleModalitySection('presencial');
       
       document.getElementById('day-config-panel').classList.remove('hidden');
-      toggleDayAvailability();
     }
 
     function closeDayConfig() {
@@ -1325,9 +1400,9 @@
       selectedConfigDate = null;
     }
 
-    function toggleDayAvailability() {
-      const isAvailable = document.getElementById('day-available').checked;
-      const section = document.getElementById('time-config-section');
+    function toggleModalitySection(modality) {
+      const isAvailable = document.getElementById(`${modality}-available`).checked;
+      const section = document.getElementById(`${modality}-config-content`);
       
       if (isAvailable) {
         section.classList.remove('hidden');
@@ -1336,19 +1411,8 @@
       }
     }
 
-    function updateConfigAddress() {
-      const modality = document.getElementById('config-modality').value;
-      const addressSection = document.getElementById('config-address-section');
-      
-      if (modality === 'presencial') {
-        addressSection.classList.remove('hidden');
-      } else {
-        addressSection.classList.add('hidden');
-      }
-    }
-
-    function renderTimeSlotsConfig(selectedTimes = []) {
-      const container = document.getElementById('time-slots-config');
+    function renderTimeSlotsConfig(modality, selectedTimes = []) {
+      const container = document.getElementById(`${modality}-time-slots`);
       container.innerHTML = '';
       
       defaultTimeSlots.forEach(time => {
@@ -1357,9 +1421,9 @@
         const div = document.createElement('div');
         div.className = 'flex items-center gap-2';
         div.innerHTML = `
-          <input type="checkbox" id="time-${time}" value="${time}" ${isSelected ? 'checked' : ''} 
+          <input type="checkbox" id="${modality}-time-${time}" value="${time}" ${isSelected ? 'checked' : ''} 
             class="w-4 h-4 text-gray-800 focus:ring-gray-800">
-          <label for="time-${time}" class="text-sm">${time}</label>
+          <label for="${modality}-time-${time}" class="text-sm">${time}</label>
         `;
         container.appendChild(div);
       });
@@ -1368,39 +1432,70 @@
     async function saveDayConfig() {
       if (!selectedConfigDate) return;
       
-      const isAvailable = document.getElementById('day-available').checked;
-      const modality = document.getElementById('config-modality').value;
-      const address = document.getElementById('config-address').value;
+      const dateStr = selectedConfigDate.toISOString().split('T')[0];
       
-      const selectedTimes = [];
-      defaultTimeSlots.forEach(time => {
-        const checkbox = document.getElementById(`time-${time}`);
-        if (checkbox && checkbox.checked) {
-          selectedTimes.push(time);
-        }
-      });
+      // Recolectar datos de VIRTUAL
+      const virtualAvailable = document.getElementById('virtual-available').checked;
+      const virtualTimes = [];
+      if (virtualAvailable) {
+        defaultTimeSlots.forEach(time => {
+          const checkbox = document.getElementById(`virtual-time-${time}`);
+          if (checkbox && checkbox.checked) {
+            virtualTimes.push(time);
+          }
+        });
+      }
       
-      if (isAvailable && selectedTimes.length === 0) {
-        alert('Si el día está disponible, debe tener al menos un horario seleccionado.');
+      // Recolectar datos de PRESENCIAL
+      const presencialAvailable = document.getElementById('presencial-available').checked;
+      const presencialTimes = [];
+      const presencialAddress = document.getElementById('presencial-address').value;
+      
+      if (presencialAvailable) {
+        defaultTimeSlots.forEach(time => {
+          const checkbox = document.getElementById(`presencial-time-${time}`);
+          if (checkbox && checkbox.checked) {
+            presencialTimes.push(time);
+          }
+        });
+      }
+      
+      // Validaciones
+      if (virtualAvailable && virtualTimes.length === 0) {
+        alert('Si activás la modalidad Virtual, debés seleccionar al menos un horario.');
         return;
       }
       
-      if (modality === 'presencial' && isAvailable && !address.trim()) {
+      if (presencialAvailable && presencialTimes.length === 0) {
+        alert('Si activás la modalidad Presencial, debés seleccionar al menos un horario.');
+        return;
+      }
+      
+      if (presencialAvailable && !presencialAddress.trim()) {
         alert('Para turnos presenciales, debés ingresar la dirección del consultorio.');
         return;
       }
       
-      const dateStr = selectedConfigDate.toISOString().split('T')[0];
+      // Si ninguna está activa, eliminar el registro
+      if (!virtualAvailable && !presencialAvailable) {
+        await deleteDayConfig();
+        return;
+      }
       
       try {
         const { error } = await supabaseClient
           .from('availability')
           .upsert({
             date: dateStr,
-            available: isAvailable,
-            times: selectedTimes,
-            modality: modality,
-            address: address,
+            virtual: {
+              available: virtualAvailable,
+              times: virtualTimes
+            },
+            presencial: {
+              available: presencialAvailable,
+              times: presencialTimes,
+              address: presencialAddress
+            },
             updated_at: new Date().toISOString()
           }, { onConflict: 'date' });
         
@@ -1409,11 +1504,10 @@
           return;
         }
         
+        // Actualizar estado local
         dayAvailability[dateStr] = {
-          available: isAvailable,
-          times: selectedTimes,
-          modality: modality,
-          address: address
+          virtual: { available: virtualAvailable, times: virtualTimes },
+          presencial: { available: presencialAvailable, times: presencialTimes, address: presencialAddress }
         };
         
         alert('Configuración guardada correctamente');
@@ -1424,28 +1518,15 @@
       }
     }
 
-    // NUEVA FUNCIÓN: Eliminar configuración de un día
+    // Eliminar configuración de un día
     async function deleteDayConfig() {
       if (!selectedConfigDate) return;
       
       const dateStr = selectedConfigDate.toISOString().split('T')[0];
-      const dayConfig = getDayConfig(selectedConfigDate);
       
-      // Verificar si hay turnos reservados para este día
-      const hasBookedAppointments = bookedSlots.some(slot => slot.appointment_date === dateStr);
-      
-      let confirmMessage = `¿Estás segura de que querés eliminar la configuración del ${selectedConfigDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}?\n\n`;
-      
-      if (hasBookedAppointments) {
-        confirmMessage += '⚠️ ATENCIÓN: Hay turnos reservados para este día. Los pacientes no podrán ver sus turnos en el calendario si eliminás la configuración.\n\n';
-      }
-      
-      confirmMessage += 'Esta acción eliminará todos los horarios configurados para este día.';
-      
-      if (!confirm(confirmMessage)) return;
+      if (!confirm(`¿Estás segura de que querés eliminar toda la configuración del ${selectedConfigDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}?`)) return;
       
       try {
-        // Eliminar de Supabase
         const { error } = await supabaseClient
           .from('availability')
           .delete()
@@ -1456,17 +1537,12 @@
           return;
         }
         
-        // Eliminar del estado local
         delete dayAvailability[dateStr];
-        
         alert('Configuración eliminada correctamente');
-        
-        // Cerrar panel y refrescar calendario
         closeDayConfig();
         renderAdminCalendar();
         
       } catch (err) {
-        console.error('Error:', err);
         alert('Error de conexión al eliminar la configuración');
       }
     }
@@ -1508,10 +1584,9 @@
       select.innerHTML = '<option value="">Seleccionar hora...</option>';
       
       let slots = [];
-      if (dayConfig.available && dayConfig.times.length > 0) {
-        slots = dayConfig.times;
+      if (dayConfig[modality] && dayConfig[modality].available && dayConfig[modality].times.length > 0) {
+        slots = dayConfig[modality].times;
       } else {
-        // Si no hay configuración, usar horarios por defecto
         slots = defaultTimeSlots;
       }
       
@@ -1580,6 +1655,7 @@
         }
         
         const dayConfig = getDayConfig(newDate);
+        const address = newModality === 'presencial' ? (dayConfig.presencial.address || 'Consultorio') : 'Virtual (videollamada)';
         
         const emailData = {
           _subject: `Turno modificado: ${editingAppointment.full_name}`,
@@ -1589,7 +1665,7 @@
           Modalidad: newModality === 'virtual' ? 'Virtual' : 'Presencial',
           Fecha: newDate,
           Hora: newTime,
-          Direccion: newModality === 'presencial' ? (dayConfig.address || 'Consultorio') : 'Virtual (videollamada)',
+          Direccion: address,
           Motivo: 'Turno reprogramado por el profesional',
           _replyto: editingAppointment.email
         };
