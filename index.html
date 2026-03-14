@@ -222,6 +222,57 @@
       border-radius: 9999px;
       font-size: 0.875rem;
     }
+
+    /* NUEVO: Estilos para slots de tiempo con duración */
+    .time-slot-config {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+    }
+    .time-slot-config:hover {
+      border-color: #d1d5db;
+      background-color: #f9fafb;
+    }
+    .duration-input {
+      width: 60px;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+    .duration-input:focus {
+      outline: none;
+      border-color: #2c2c2c;
+    }
+    .time-display {
+      font-family: monospace;
+      font-size: 0.875rem;
+      min-width: 50px;
+    }
+    .time-slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.5rem;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 0.5rem;
+      background: #f9fafb;
+      border-radius: 0.5rem;
+    }
+    .slot-duration-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.125rem 0.375rem;
+      border-radius: 9999px;
+      background-color: #e5e7eb;
+      color: #374151;
+      margin-left: 0.25rem;
+    }
   </style>
 </head>
 <body class="antialiased">
@@ -421,6 +472,12 @@
             </div>
           </div>
 
+          <!-- NUEVO: Mostrar duración del turno -->
+          <div class="mt-4 pt-4 border-t border-beige">
+            <p class="text-sm text-gray-500 uppercase tracking-wider">Duración</p>
+            <p class="font-semibold text-gray-800 text-lg" id="confirm-duration"></p>
+          </div>
+
           <div id="confirm-location-wrap" class="mt-4 hidden">
             <p class="text-sm text-gray-500 uppercase tracking-wider">Dirección</p>
             <p class="font-semibold text-gray-800" id="confirm-location"></p>
@@ -540,7 +597,7 @@
             <div class="mb-6">
               <h4 class="text-lg font-semibold mb-4">Configurar Disponibilidad de Turnos</h4>
               <p class="text-sm text-gray-600 mb-4">
-                Seleccioná los días y configurá los horarios disponibles. Podés tener ambas modalidades (virtual y presencial) en el mismo día con horarios diferentes.
+                Seleccioná los días y configurá los horarios disponibles. Podés definir la duración de cada turno individualmente (30, 40, 50 minutos, o el tiempo que necesites).
               </p>
               
               <div class="flex justify-between items-center mb-4">
@@ -596,11 +653,11 @@
                 </div>
                 
                 <div id="virtual-config-content" class="hidden">
-                  <div class="mb-3">
-                    <label class="block text-xs uppercase tracking-wider text-gray-600 mb-2">Horarios Disponibles</label>
-                    <div id="virtual-time-slots" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                      <!-- Se generan dinámicamente -->
-                    </div>
+                  <p class="text-xs text-gray-600 mb-3">
+                    Seleccioná los horarios y definí la duración de cada turno. Por defecto: 50 min.
+                  </p>
+                  <div id="virtual-time-slots" class="time-slot-grid">
+                    <!-- Se generan dinámicamente -->
                   </div>
                 </div>
               </div>
@@ -622,11 +679,11 @@
                     <input type="text" id="presencial-address" class="input-elegant w-full px-3 py-2 rounded-lg text-sm" placeholder="Ej: 153 e 518 y 519, La Plata">
                   </div>
                   
-                  <div class="mb-3">
-                    <label class="block text-xs uppercase tracking-wider text-gray-600 mb-2">Horarios Disponibles</label>
-                    <div id="presencial-time-slots" class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                      <!-- Se generan dinámicamente -->
-                    </div>
+                  <p class="text-xs text-gray-600 mb-3">
+                    Seleccioná los horarios y definí la duración de cada turno. Por defecto: 50 min.
+                  </p>
+                  <div id="presencial-time-slots" class="time-slot-grid">
+                    <!-- Se generan dinámicamente -->
                   </div>
                 </div>
               </div>
@@ -689,6 +746,12 @@
           <select id="edit-time" required class="input-elegant w-full px-4 py-3 rounded-xl">
             <option value="">Seleccionar hora...</option>
           </select>
+        </div>
+
+        <!-- NUEVO: Mostrar duración en edición -->
+        <div id="edit-duration-display" class="hidden bg-gray-100 p-3 rounded-lg">
+          <label class="block text-xs uppercase tracking-wider text-gray-600 mb-1">Duración del turno</label>
+          <p class="font-semibold text-gray-800" id="edit-duration-text"></p>
         </div>
         
         <div class="flex gap-3 mt-6">
@@ -764,6 +827,7 @@
     let selectedModality = null;
     let selectedDate = null;
     let selectedTime = null;
+    let selectedDuration = 50; // NUEVO: Duración seleccionada por defecto
     let currentDate = new Date();
     let adminCurrentDate = new Date();
     let bookedSlots = [];
@@ -771,13 +835,16 @@
     let selectedConfigDate = null;
     let dayAvailability = {};
 
-    // Slots de tiempo para configurar
+    // Slots de tiempo base para configurar
     const defaultTimeSlots = [
       "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
       "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
       "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
       "18:00", "18:30", "19:00", "19:30", "20:00"
     ];
+
+    // Duración por defecto para nuevos slots (en minutos)
+    const DEFAULT_DURATION = 50;
 
     // Cargar disponibilidad desde Supabase
     async function loadAvailability() {
@@ -793,10 +860,10 @@
         
         dayAvailability = {};
         data.forEach(day => {
-          // Nueva estructura: cada día puede tener virtual y presencial separados
+          // Migración: convertir formato antiguo (array de strings) al nuevo (array de objetos)
           dayAvailability[day.date] = {
-            virtual: day.virtual || { available: false, times: [] },
-            presencial: day.presencial || { available: false, times: [], address: '' }
+            virtual: normalizeSlots(day.virtual),
+            presencial: normalizeSlots(day.presencial)
           };
         });
       } catch (err) {
@@ -804,21 +871,59 @@
       }
     }
 
+    // NUEVO: Normalizar slots para compatibilidad con datos antiguos
+    function normalizeSlots(modalityData) {
+      if (!modalityData) return { available: false, slots: [] };
+      
+      // Si es el formato nuevo (tiene slots array)
+      if (modalityData.slots && Array.isArray(modalityData.slots)) {
+        return {
+          available: modalityData.available || false,
+          slots: modalityData.slots.map(slot => ({
+            time: slot.time || slot,
+            duration: slot.duration || DEFAULT_DURATION
+          })),
+          address: modalityData.address || ''
+        };
+      }
+      
+      // Si es el formato antiguo (times array de strings)
+      if (modalityData.times && Array.isArray(modalityData.times)) {
+        return {
+          available: modalityData.available || false,
+          slots: modalityData.times.map(time => ({
+            time: time,
+            duration: DEFAULT_DURATION
+          })),
+          address: modalityData.address || ''
+        };
+      }
+      
+      return { available: false, slots: [], address: '' };
+    }
+
     // Verificar si un día tiene disponibilidad para una modalidad específica
     function isDayAvailable(date, modality) {
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
       const config = dayAvailability[dateStr];
       if (!config || !config[modality]) return false;
-      return config[modality].available && config[modality].times.length > 0;
+      return config[modality].available && config[modality].slots.length > 0;
     }
 
     // Obtener configuración de un día
     function getDayConfig(date) {
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
       return dayAvailability[dateStr] || { 
-        virtual: { available: false, times: [] }, 
-        presencial: { available: false, times: [], address: '' } 
+        virtual: { available: false, slots: [] }, 
+        presencial: { available: false, slots: [], address: '' } 
       };
+    }
+
+    // NUEVO: Obtener duración de un slot específico
+    function getSlotDuration(date, time, modality) {
+      const config = getDayConfig(date);
+      const slot = config[modality]?.slots.find(s => s.time === time);
+      return slot ? slot.duration : DEFAULT_DURATION;
     }
 
     // Verificar si un slot está reservado
@@ -836,7 +941,7 @@
       try {
         const { data, error } = await supabaseClient
           .from('appointments')
-          .select('appointment_date, appointment_time, modality, id');
+          .select('appointment_date, appointment_time, modality, id, duration');
         
         if (error) {
           console.error('Error cargando turnos:', error);
@@ -937,22 +1042,22 @@
         const isSelected = selectedDate && date.getTime() === selectedDate.getTime();
         
         const dayConfig = getDayConfig(date);
-        const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.times.length > 0;
-        const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.times.length > 0;
+        const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.slots.length > 0;
+        const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.slots.length > 0;
         
         // Contar slots disponibles para la modalidad seleccionada
         let availableSlots = 0;
         let totalSlots = 0;
         
         if (selectedModality === 'virtual' && hasVirtual) {
-          totalSlots = dayConfig.virtual.times.length;
-          dayConfig.virtual.times.forEach(time => {
-            if (!isSlotBooked(dateStr, time)) availableSlots++;
+          totalSlots = dayConfig.virtual.slots.length;
+          dayConfig.virtual.slots.forEach(slot => {
+            if (!isSlotBooked(dateStr, slot.time)) availableSlots++;
           });
         } else if (selectedModality === 'presencial' && hasPresencial) {
-          totalSlots = dayConfig.presencial.times.length;
-          dayConfig.presencial.times.forEach(time => {
-            if (!isSlotBooked(dateStr, time)) availableSlots++;
+          totalSlots = dayConfig.presencial.slots.length;
+          dayConfig.presencial.slots.forEach(slot => {
+            if (!isSlotBooked(dateStr, slot.time)) availableSlots++;
           });
         }
 
@@ -1004,6 +1109,7 @@
       updateStep2Button();
     }
 
+    // NUEVO: Renderizar time slots con duración visible
     function renderTimeSlots() {
       const container = document.getElementById('time-slots-container');
       const locationInfo = document.getElementById('location-info');
@@ -1019,29 +1125,38 @@
       const dayConfig = getDayConfig(selectedDate);
       
       // Verificar si hay disponibilidad para la modalidad seleccionada
-      const modalityConfig = selectedModality === 'virtual' ? dayConfig.virtual : dayConfig.presencial;
+      const modalityConfig = dayConfig[selectedModality];
       
-      if (!modalityConfig.available || modalityConfig.times.length === 0) {
+      if (!modalityConfig.available || modalityConfig.slots.length === 0) {
         container.innerHTML = `<p class="text-gray-400 text-sm">No hay horarios ${selectedModality === 'virtual' ? 'virtuales' : 'presenciales'} configurados para este día</p>`;
         locationInfo.classList.add('hidden');
         return;
       }
 
-      let html = '<div class="grid grid-cols-3 gap-3">';
-      modalityConfig.times.forEach(time => {
-        const isSelected = selectedTime === time;
-        const isBooked = isSlotBooked(dateStr, time);
+      let html = '<div class="grid grid-cols-1 gap-2">';
+      modalityConfig.slots.forEach(slot => {
+        const isSelected = selectedTime === slot.time;
+        const isBooked = isSlotBooked(dateStr, slot.time);
         
-        let classes = 'time-slot p-3 rounded-xl border text-center text-sm font-medium ';
+        let classes = 'time-slot p-3 rounded-xl border text-left text-sm font-medium flex justify-between items-center ';
         if (isBooked) {
           classes += 'booked';
-          html += `<div class="${classes}" title="Turno reservado">${time}</div>`;
+          html += `<div class="${classes}">
+            <span>${slot.time}</span>
+            <span class="text-xs bg-red-200 px-2 py-1 rounded">Reservado</span>
+          </div>`;
         } else if (isSelected) {
           classes += 'selected border-gray-800 cursor-pointer';
-          html += `<button type="button" class="${classes}" onclick="selectTime('${time}')">${time}</button>`;
+          html += `<button type="button" class="${classes}" onclick="selectTime('${slot.time}', ${slot.duration})">
+            <span>${slot.time}</span>
+            <span class="slot-duration-badge bg-gray-700 text-white">${slot.duration} min</span>
+          </button>`;
         } else {
           classes += 'border-gray-200 hover:border-gray-800 text-gray-700 bg-white cursor-pointer';
-          html += `<button type="button" class="${classes}" onclick="selectTime('${time}')">${time}</button>`;
+          html += `<button type="button" class="${classes}" onclick="selectTime('${slot.time}', ${slot.duration})">
+            <span>${slot.time}</span>
+            <span class="slot-duration-badge">${slot.duration} min</span>
+          </button>`;
         }
       });
       html += '</div>';
@@ -1057,8 +1172,10 @@
       }
     }
 
-    function selectTime(time) {
+    // NUEVO: Modificar selectTime para guardar también la duración
+    function selectTime(time, duration) {
       selectedTime = time;
+      selectedDuration = duration || DEFAULT_DURATION;
       renderTimeSlots();
       updateStep2Button();
     }
@@ -1072,6 +1189,7 @@
       }
     }
 
+    // NUEVO: Actualizar confirmación incluyendo duración
     function updateConfirmation() {
       document.getElementById('confirm-modality').textContent = selectedModality === 'virtual' ? 'Virtual' : 'Presencial';
 
@@ -1084,6 +1202,10 @@
 
       document.getElementById('confirm-date').textContent = dateStr;
       document.getElementById('confirm-time').textContent = selectedTime + ' hs';
+      
+      // Mostrar duración
+      const duration = selectedDuration || getSlotDuration(selectedDate, selectedTime, selectedModality);
+      document.getElementById('confirm-duration').textContent = `${duration} minutos`;
 
       const wrap = document.getElementById('confirm-location-wrap');
       const loc = document.getElementById('confirm-location');
@@ -1098,6 +1220,7 @@
       }
     }
 
+    // NUEVO: Modificar submitBooking para incluir duración
     async function submitBooking() {
       const form = document.getElementById('bookingForm');
       if (!form.checkValidity()) {
@@ -1118,6 +1241,7 @@
       btn.innerHTML = 'Enviando... <i class="fas fa-spinner fa-spin ml-2"></i>';
 
       const dayConfig = getDayConfig(selectedDate);
+      const slotDuration = getSlotDuration(selectedDate, selectedTime, selectedModality);
 
       const appointmentData = {
         full_name: document.getElementById('fullName').value.trim(),
@@ -1127,6 +1251,7 @@
         modality: selectedModality,
         appointment_date: selectedDate.toISOString().split('T')[0],
         appointment_time: selectedTime,
+        duration: slotDuration, // NUEVO: Guardar duración
         status: 'pending'
       };
 
@@ -1157,6 +1282,7 @@
           Modalidad: appointmentData.modality === 'virtual' ? 'Virtual' : 'Presencial',
           Fecha: appointmentData.appointment_date,
           Hora: appointmentData.appointment_time,
+          Duracion: `${slotDuration} minutos`,
           Direccion: appointmentData.modality === 'presencial' ? (dayConfig.presencial.address || 'Consultorio') : 'Virtual (videollamada)',
           Motivo: appointmentData.reason || 'No especificado',
           _replyto: appointmentData.email
@@ -1189,6 +1315,7 @@
       selectedModality = null;
       selectedDate = null;
       selectedTime = null;
+      selectedDuration = 50;
       currentStep = 1;
       currentDate = new Date();
 
@@ -1254,6 +1381,7 @@
       document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
     }
 
+    // NUEVO: Mostrar duración en la lista de turnos
     async function loadAppointments() {
       const container = document.getElementById('appointments-list');
       container.innerHTML = '<p class="text-gray-400 text-center py-8">Cargando turnos...</p>';
@@ -1284,12 +1412,16 @@
             month: 'short'
           });
           
+          // NUEVO: Mostrar duración si existe
+          const durationBadge = apt.duration ? `<span class="ml-2 px-2 py-1 rounded text-xs bg-gray-200 text-gray-700">${apt.duration} min</span>` : '';
+          
           html += `
             <div class="appointment-card p-4 rounded-lg flex justify-between items-center">
               <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
                   <span class="font-semibold text-gray-800">${dateStr}</span>
                   <span class="text-gray-600">${apt.appointment_time} hs</span>
+                  ${durationBadge}
                   <span class="px-2 py-1 rounded text-xs ${apt.modality === 'virtual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
                     ${apt.modality === 'virtual' ? 'Virtual' : 'Presencial'}
                   </span>
@@ -1336,8 +1468,8 @@
         const dateStr = date.toISOString().split('T')[0];
         const dayConfig = getDayConfig(date);
         
-        const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.times.length > 0;
-        const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.times.length > 0;
+        const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.slots.length > 0;
+        const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.slots.length > 0;
         
         let classes = 'admin-calendar-day p-2 rounded-lg text-center ';
         let content = `<div class="font-semibold mb-1">${day}</div>`;
@@ -1346,15 +1478,15 @@
         if (hasVirtual && hasPresencial) {
           classes += 'has-both ';
           content += `<div class="text-xs text-purple-700 font-semibold">Ambas</div>`;
-          content += `<div class="text-xs text-gray-500">${dayConfig.virtual.times.length + dayConfig.presencial.times.length} horarios</div>`;
+          content += `<div class="text-xs text-gray-500">${dayConfig.virtual.slots.length + dayConfig.presencial.slots.length} horarios</div>`;
         } else if (hasVirtual) {
           classes += 'has-virtual ';
           content += `<div class="text-xs text-blue-700">Virtual</div>`;
-          content += `<div class="text-xs text-gray-500">${dayConfig.virtual.times.length} horarios</div>`;
+          content += `<div class="text-xs text-gray-500">${dayConfig.virtual.slots.length} horarios</div>`;
         } else if (hasPresencial) {
           classes += 'has-presencial ';
           content += `<div class="text-xs text-green-700">Presencial</div>`;
-          content += `<div class="text-xs text-gray-500">${dayConfig.presencial.times.length} horarios</div>`;
+          content += `<div class="text-xs text-gray-500">${dayConfig.presencial.slots.length} horarios</div>`;
         } else {
           content += `<div class="text-xs text-gray-400">No disponible</div>`;
         }
@@ -1371,6 +1503,7 @@
       document.getElementById('day-config-panel').classList.add('hidden');
     }
 
+    // NUEVO: Modificar selectAdminDay para trabajar con slots
     function selectAdminDay(year, month, day) {
       selectedConfigDate = new Date(year, month, day);
       const dateStr = selectedConfigDate.toISOString().split('T')[0];
@@ -1381,12 +1514,12 @@
       
       // Cargar configuración VIRTUAL
       document.getElementById('virtual-available').checked = dayConfig.virtual.available;
-      renderTimeSlotsConfig('virtual', dayConfig.virtual.times);
+      renderTimeSlotsConfig('virtual', dayConfig.virtual.slots);
       
       // Cargar configuración PRESENCIAL
       document.getElementById('presencial-available').checked = dayConfig.presencial.available;
       document.getElementById('presencial-address').value = dayConfig.presencial.address || '';
-      renderTimeSlotsConfig('presencial', dayConfig.presencial.times);
+      renderTimeSlotsConfig('presencial', dayConfig.presencial.slots);
       
       // Mostrar/ocultar secciones según estado
       toggleModalitySection('virtual');
@@ -1411,24 +1544,62 @@
       }
     }
 
-    function renderTimeSlotsConfig(modality, selectedTimes = []) {
+    // NUEVO: Renderizar slots de tiempo con input de duración
+    function renderTimeSlotsConfig(modality, selectedSlots = []) {
       const container = document.getElementById(`${modality}-time-slots`);
       container.innerHTML = '';
       
+      // Crear mapa de slots seleccionados para fácil acceso
+      const selectedMap = {};
+      selectedSlots.forEach(slot => {
+        selectedMap[slot.time] = slot.duration || DEFAULT_DURATION;
+      });
+      
       defaultTimeSlots.forEach(time => {
-        const isSelected = selectedTimes.includes(time);
+        const isSelected = selectedMap.hasOwnProperty(time);
+        const duration = selectedMap[time] || DEFAULT_DURATION;
         
         const div = document.createElement('div');
-        div.className = 'flex items-center gap-2';
+        div.className = 'time-slot-config';
         div.innerHTML = `
           <input type="checkbox" id="${modality}-time-${time}" value="${time}" ${isSelected ? 'checked' : ''} 
-            class="w-4 h-4 text-gray-800 focus:ring-gray-800">
-          <label for="${modality}-time-${time}" class="text-sm">${time}</label>
+            class="w-4 h-4 text-gray-800 focus:ring-gray-800 rounded" onchange="toggleDurationInput('${modality}', '${time}')">
+          <span class="time-display">${time}</span>
+          <div class="flex items-center gap-1 ml-auto" id="duration-wrapper-${modality}-${time}" style="${isSelected ? '' : 'opacity: 0.5; pointer-events: none;'}">
+            <input type="number" id="${modality}-duration-${time}" value="${duration}" min="15" max="180" step="5"
+              class="duration-input" title="Duración en minutos" onchange="validateDuration(this)">
+            <span class="text-xs text-gray-500">min</span>
+          </div>
         `;
         container.appendChild(div);
       });
     }
 
+    // NUEVO: Toggle del input de duración según checkbox
+    function toggleDurationInput(modality, time) {
+      const checkbox = document.getElementById(`${modality}-time-${time}`);
+      const wrapper = document.getElementById(`duration-wrapper-${modality}-${time}`);
+      
+      if (checkbox.checked) {
+        wrapper.style.opacity = '1';
+        wrapper.style.pointerEvents = 'auto';
+      } else {
+        wrapper.style.opacity = '0.5';
+        wrapper.style.pointerEvents = 'none';
+      }
+    }
+
+    // NUEVO: Validar duración
+    function validateDuration(input) {
+      let value = parseInt(input.value);
+      if (isNaN(value) || value < 15) {
+        input.value = 15;
+      } else if (value > 180) {
+        input.value = 180;
+      }
+    }
+
+    // NUEVO: Modificar saveDayConfig para guardar slots con duración
     async function saveDayConfig() {
       if (!selectedConfigDate) return;
       
@@ -1436,37 +1607,45 @@
       
       // Recolectar datos de VIRTUAL
       const virtualAvailable = document.getElementById('virtual-available').checked;
-      const virtualTimes = [];
+      const virtualSlots = [];
       if (virtualAvailable) {
         defaultTimeSlots.forEach(time => {
           const checkbox = document.getElementById(`virtual-time-${time}`);
           if (checkbox && checkbox.checked) {
-            virtualTimes.push(time);
+            const durationInput = document.getElementById(`virtual-duration-${time}`);
+            virtualSlots.push({
+              time: time,
+              duration: parseInt(durationInput.value) || DEFAULT_DURATION
+            });
           }
         });
       }
       
       // Recolectar datos de PRESENCIAL
       const presencialAvailable = document.getElementById('presencial-available').checked;
-      const presencialTimes = [];
+      const presencialSlots = [];
       const presencialAddress = document.getElementById('presencial-address').value;
       
       if (presencialAvailable) {
         defaultTimeSlots.forEach(time => {
           const checkbox = document.getElementById(`presencial-time-${time}`);
           if (checkbox && checkbox.checked) {
-            presencialTimes.push(time);
+            const durationInput = document.getElementById(`presencial-duration-${time}`);
+            presencialSlots.push({
+              time: time,
+              duration: parseInt(durationInput.value) || DEFAULT_DURATION
+            });
           }
         });
       }
       
       // Validaciones
-      if (virtualAvailable && virtualTimes.length === 0) {
+      if (virtualAvailable && virtualSlots.length === 0) {
         alert('Si activás la modalidad Virtual, debés seleccionar al menos un horario.');
         return;
       }
       
-      if (presencialAvailable && presencialTimes.length === 0) {
+      if (presencialAvailable && presencialSlots.length === 0) {
         alert('Si activás la modalidad Presencial, debés seleccionar al menos un horario.');
         return;
       }
@@ -1489,11 +1668,11 @@
             date: dateStr,
             virtual: {
               available: virtualAvailable,
-              times: virtualTimes
+              slots: virtualSlots
             },
             presencial: {
               available: presencialAvailable,
-              times: presencialTimes,
+              slots: presencialSlots,
               address: presencialAddress
             },
             updated_at: new Date().toISOString()
@@ -1506,8 +1685,8 @@
         
         // Actualizar estado local
         dayAvailability[dateStr] = {
-          virtual: { available: virtualAvailable, times: virtualTimes },
-          presencial: { available: presencialAvailable, times: presencialTimes, address: presencialAddress }
+          virtual: { available: virtualAvailable, slots: virtualSlots },
+          presencial: { available: presencialAvailable, slots: presencialSlots, address: presencialAddress }
         };
         
         alert('Configuración guardada correctamente');
@@ -1547,7 +1726,7 @@
       }
     }
 
-    // Edit modal functions
+    // NUEVO: Modificar openEditModal para mostrar duración
     async function openEditModal(appointmentId) {
       const { data, error } = await supabaseClient
         .from('appointments')
@@ -1568,6 +1747,16 @@
       
       await updateEditTimeSlots(data.appointment_date, data.modality, data.appointment_time);
       
+      // NUEVO: Mostrar duración actual
+      const durationDisplay = document.getElementById('edit-duration-display');
+      const durationText = document.getElementById('edit-duration-text');
+      if (data.duration) {
+        durationDisplay.classList.remove('hidden');
+        durationText.textContent = `${data.duration} minutos`;
+      } else {
+        durationDisplay.classList.add('hidden');
+      }
+      
       document.getElementById('edit-modal').classList.add('active');
     }
 
@@ -1576,6 +1765,7 @@
       editingAppointment = null;
     }
 
+    // NUEVO: Modificar updateEditTimeSlots para trabajar con slots
     async function updateEditTimeSlots(dateStr, modality, currentTime) {
       const date = new Date(dateStr);
       const dayConfig = getDayConfig(date);
@@ -1584,19 +1774,20 @@
       select.innerHTML = '<option value="">Seleccionar hora...</option>';
       
       let slots = [];
-      if (dayConfig[modality] && dayConfig[modality].available && dayConfig[modality].times.length > 0) {
-        slots = dayConfig[modality].times;
+      if (dayConfig[modality] && dayConfig[modality].available && dayConfig[modality].slots.length > 0) {
+        slots = dayConfig[modality].slots;
       } else {
-        slots = defaultTimeSlots;
+        // Si no hay configuración, usar slots por defecto
+        slots = defaultTimeSlots.map(t => ({ time: t, duration: DEFAULT_DURATION }));
       }
       
-      slots.forEach(time => {
-        const isBooked = isSlotBooked(dateStr, time, editingAppointment?.id);
-        const isCurrent = time === currentTime;
+      slots.forEach(slot => {
+        const isBooked = isSlotBooked(dateStr, slot.time, editingAppointment?.id);
+        const isCurrent = slot.time === currentTime;
         
         const option = document.createElement('option');
-        option.value = time;
-        option.textContent = time + (isBooked ? ' (Ocupado)' : '') + (isCurrent ? ' - Actual' : '');
+        option.value = slot.time;
+        option.textContent = `${slot.time} (${slot.duration} min)` + (isBooked ? ' - Ocupado' : '') + (isCurrent ? ' - Actual' : '');
         
         if (isBooked && !isCurrent) {
           option.disabled = true;
@@ -1622,6 +1813,7 @@
       await updateEditTimeSlots(date, this.value, null);
     });
 
+    // NUEVO: Modificar saveEdit para incluir duración
     async function saveEdit() {
       if (!editingAppointment) return;
       
@@ -1639,13 +1831,19 @@
         return;
       }
       
+      // Obtener la duración del nuevo slot seleccionado
+      const dayConfig = getDayConfig(newDate);
+      const newSlot = dayConfig[newModality]?.slots?.find(s => s.time === newTime);
+      const newDuration = newSlot ? newSlot.duration : DEFAULT_DURATION;
+      
       try {
         const { error } = await supabaseClient
           .from('appointments')
           .update({
             modality: newModality,
             appointment_date: newDate,
-            appointment_time: newTime
+            appointment_time: newTime,
+            duration: newDuration // Actualizar duración según configuración del nuevo horario
           })
           .eq('id', editingAppointment.id);
         
@@ -1654,7 +1852,6 @@
           return;
         }
         
-        const dayConfig = getDayConfig(newDate);
         const address = newModality === 'presencial' ? (dayConfig.presencial.address || 'Consultorio') : 'Virtual (videollamada)';
         
         const emailData = {
@@ -1665,6 +1862,7 @@
           Modalidad: newModality === 'virtual' ? 'Virtual' : 'Presencial',
           Fecha: newDate,
           Hora: newTime,
+          Duracion: `${newDuration} minutos`,
           Direccion: address,
           Motivo: 'Turno reprogramado por el profesional',
           _replyto: editingAppointment.email
