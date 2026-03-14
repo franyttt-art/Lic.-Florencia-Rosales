@@ -53,10 +53,17 @@
     .calendar-day.mixed { background: linear-gradient(135deg, #dbeafe 50%, #dcfce7 50%); color: #1e40af; font-weight: 600; }
 
     .time-slot { transition: all 0.2s ease; }
-    .time-slot:hover:not(.disabled):not(.booked) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .time-slot:hover:not(.disabled):not(.booked):not(.blocked) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .time-slot.selected { background-color: #2c2c2c; color: #f5f3f0; border-color: #2c2c2c; }
-    .time-slot.disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+    .time-slot.disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; background-color: #f3f4f6; }
     .time-slot.booked { background-color: #fee2e2; color: #991b1b; cursor: not-allowed; text-decoration: line-through; border-color: #fecaca; }
+    .time-slot.blocked { 
+      background-color: #fef3c7; 
+      color: #92400e; 
+      cursor: not-allowed; 
+      border-color: #fcd34d;
+      opacity: 0.8;
+    }
 
     .modalidad-btn { transition: all 0.3s ease; }
     .modalidad-btn.selected { background-color: #2c2c2c; color: #f5f3f0; border-color: #2c2c2c; }
@@ -121,19 +128,7 @@
     .btn-edit:hover {
       background: #1d4ed8;
     }
-    .btn-save {
-      background: #059669;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    .btn-save:hover {
-      background: #047857;
-    }
     
-    /* Modal styles */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -223,7 +218,6 @@
       font-size: 0.875rem;
     }
 
-    /* NUEVO: Estilos para slots de tiempo con duración */
     .time-slot-config {
       display: flex;
       align-items: center;
@@ -232,10 +226,21 @@
       background: white;
       border-radius: 0.5rem;
       border: 1px solid #e5e7eb;
+      transition: all 0.2s;
     }
     .time-slot-config:hover {
       border-color: #d1d5db;
       background-color: #f9fafb;
+    }
+    .time-slot-config.blocked-by-other {
+      background-color: #fef3c7;
+      border-color: #fcd34d;
+      opacity: 0.7;
+    }
+    .time-slot-config.selected-slot {
+      background-color: #dcfce7;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
     }
     .duration-input {
       width: 60px;
@@ -256,9 +261,9 @@
     }
     .time-slot-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 0.5rem;
-      max-height: 300px;
+      max-height: 400px;
       overflow-y: auto;
       padding: 0.5rem;
       background: #f9fafb;
@@ -273,6 +278,21 @@
       color: #374151;
       margin-left: 0.25rem;
     }
+    .overlap-warning {
+      font-size: 0.75rem;
+      color: #92400e;
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
+    .conflict-alert {
+      background-color: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
   </style>
 </head>
 <body class="antialiased">
@@ -286,7 +306,6 @@
           <p class="text-xs uppercase tracking-[0.3em] text-beige-dark mt-1">Lic. en Psicología</p>
         </div>
         
-        <!-- Solo botón Admin (visible en todos los dispositivos) -->
         <button onclick="toggleAdmin()" class="text-gray-600 hover:text-gray-800 flex items-center gap-1 text-sm uppercase tracking-wider">
           <i class="fas fa-lock"></i> <span class="hidden sm:inline">Admin</span>
         </button>
@@ -472,7 +491,6 @@
             </div>
           </div>
 
-          <!-- NUEVO: Mostrar duración del turno -->
           <div class="mt-4 pt-4 border-t border-beige">
             <p class="text-sm text-gray-500 uppercase tracking-wider">Duración</p>
             <p class="font-semibold text-gray-800 text-lg" id="confirm-duration"></p>
@@ -540,7 +558,7 @@
     </div>
   </section>
 
-  <!-- ADMIN PANEL (Hidden by default) -->
+  <!-- ADMIN PANEL -->
   <section id="admin-section" class="py-20 bg-gray-50 hidden">
     <div class="max-w-6xl mx-auto px-6">
       <div class="admin-panel p-8">
@@ -551,7 +569,6 @@
           </button>
         </div>
 
-        <!-- Login Form -->
         <div id="admin-login" class="max-w-md mx-auto text-center py-8">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center text-2xl text-gray-600">
             <i class="fas fa-lock"></i>
@@ -565,10 +582,8 @@
           <p id="login-error" class="text-red-500 text-sm mt-2 hidden">Contraseña incorrecta</p>
         </div>
 
-        <!-- Admin Dashboard -->
         <div id="admin-dashboard" class="hidden">
           
-          <!-- Tabs -->
           <div class="flex gap-4 mb-6 border-b">
             <button onclick="showAdminTab('turnos')" id="tab-turnos" class="px-4 py-2 border-b-2 border-gray-800 font-semibold">
               Turnos Reservados
@@ -596,9 +611,10 @@
           <div id="admin-tab-config" class="hidden">
             <div class="mb-6">
               <h4 class="text-lg font-semibold mb-4">Configurar Disponibilidad de Turnos</h4>
-              <p class="text-sm text-gray-600 mb-4">
-                Seleccioná los días y configurá los horarios disponibles. Podés definir la duración de cada turno individualmente (30, 40, 50 minutos, o el tiempo que necesites).
-              </p>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm text-blue-800">
+                <i class="fas fa-info-circle mr-2"></i>
+                <strong>Sistema inteligente de solapamiento:</strong> Si configurás un turno de 40 minutos a las 9:00, el sistema bloqueará automáticamente el horario de las 9:30 porque se solapa. Los horarios afectados se marcarán en amarillo.
+              </div>
               
               <div class="flex justify-between items-center mb-4">
                 <button onclick="changeAdminMonth(-1)" class="p-2 hover:bg-gray-100 rounded-full">
@@ -615,7 +631,6 @@
               </div>
               <div class="grid grid-cols-7 gap-1" id="adminCalendar"></div>
               
-              <!-- Leyenda -->
               <div class="flex gap-4 mt-4 text-xs justify-center">
                 <div class="flex items-center gap-1">
                   <div class="w-3 h-3 bg-blue-100 border border-blue-500 rounded"></div>
@@ -641,6 +656,11 @@
                 </button>
               </div>
               
+              <div id="conflict-warning" class="conflict-alert hidden">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="conflict-text"></span>
+              </div>
+              
               <!-- SECCIÓN VIRTUAL -->
               <div class="modality-section bg-blue-50">
                 <div class="modality-header">
@@ -654,11 +674,10 @@
                 
                 <div id="virtual-config-content" class="hidden">
                   <p class="text-xs text-gray-600 mb-3">
-                    Seleccioná los horarios y definí la duración de cada turno. Por defecto: 50 min.
+                    Seleccioná los horarios y definí la duración. Los horarios que se solapen se bloquearán automáticamente.
                   </p>
-                  <div id="virtual-time-slots" class="time-slot-grid">
-                    <!-- Se generan dinámicamente -->
-                  </div>
+                  <div id="virtual-time-slots" class="time-slot-grid"></div>
+                  <div id="virtual-overlaps" class="mt-2 text-sm text-amber-700"></div>
                 </div>
               </div>
 
@@ -680,29 +699,23 @@
                   </div>
                   
                   <p class="text-xs text-gray-600 mb-3">
-                    Seleccioná los horarios y definí la duración de cada turno. Por defecto: 50 min.
+                    Seleccioná los horarios y definí la duración. Los horarios que se solapen se bloquearán automáticamente.
                   </p>
-                  <div id="presencial-time-slots" class="time-slot-grid">
-                    <!-- Se generan dinámicamente -->
-                  </div>
+                  <div id="presencial-time-slots" class="time-slot-grid"></div>
+                  <div id="presencial-overlaps" class="mt-2 text-sm text-amber-700"></div>
                 </div>
               </div>
 
-              <!-- BOTONES DE ACCIÓN -->
               <div class="flex gap-3 mt-6">
                 <button onclick="saveDayConfig()" class="flex-1 px-6 py-3 bg-gray-800 text-white rounded-full font-medium hover:bg-gray-700">
                   <i class="fas fa-save mr-2"></i> Guardar Configuración
                 </button>
               </div>
 
-              <!-- BOTÓN PARA ELIMINAR CONFIGURACIÓN DEL DÍA -->
               <div class="mt-4 pt-4 border-t border-gray-200">
                 <button onclick="deleteDayConfig()" class="w-full px-6 py-3 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
                   <i class="fas fa-trash-alt"></i> Eliminar Configuración de este Día
                 </button>
-                <p class="text-xs text-gray-500 mt-2 text-center">
-                  Esto eliminará todas las modalidades configuradas para este día.
-                </p>
               </div>
             </div>
           </div>
@@ -748,7 +761,6 @@
           </select>
         </div>
 
-        <!-- NUEVO: Mostrar duración en edición -->
         <div id="edit-duration-display" class="hidden bg-gray-100 p-3 rounded-lg">
           <label class="block text-xs uppercase tracking-wider text-gray-600 mb-1">Duración del turno</label>
           <p class="font-semibold text-gray-800" id="edit-duration-text"></p>
@@ -797,7 +809,6 @@
       <p class="text-gray-500 text-sm mb-8">Atención a niños, adolescentes y adultos</p>
 
       <div class="flex justify-center gap-6 mb-8">
-        <!-- LINK DE INSTAGRAM ACTUALIZADO -->
         <a href="https://www.instagram.com/psi.rosalesflorencia?igsh=MWh0MWFpa3d5dzdyOA==" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 smooth-transition">
           <i class="fab fa-instagram"></i>
         </a>
@@ -827,7 +838,7 @@
     let selectedModality = null;
     let selectedDate = null;
     let selectedTime = null;
-    let selectedDuration = 50; // NUEVO: Duración seleccionada por defecto
+    let selectedDuration = 50;
     let currentDate = new Date();
     let adminCurrentDate = new Date();
     let bookedSlots = [];
@@ -835,7 +846,6 @@
     let selectedConfigDate = null;
     let dayAvailability = {};
 
-    // Slots de tiempo base para configurar
     const defaultTimeSlots = [
       "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
       "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
@@ -843,10 +853,88 @@
       "18:00", "18:30", "19:00", "19:30", "20:00"
     ];
 
-    // Duración por defecto para nuevos slots (en minutos)
     const DEFAULT_DURATION = 50;
 
-    // Cargar disponibilidad desde Supabase
+    // ==================== FUNCIONES DE SOLAPAMIENTO ====================
+
+    // Convertir "HH:MM" a minutos desde medianoche
+    function timeToMinutes(timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    }
+
+    // Convertir minutos a "HH:MM"
+    function minutesToTime(minutes) {
+      const hrs = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    }
+
+    // Verificar si dos rangos se solapan
+    function rangesOverlap(start1, end1, start2, end2) {
+      return start1 < end2 && start2 < end1;
+    }
+
+    // Calcular qué horarios están bloqueados por los seleccionados
+    function calculateBlockedSlots(selectedSlots) {
+      // selectedSlots es array de {time, duration}
+      const blocked = new Set();
+      const selectedTimes = new Set(selectedSlots.map(s => s.time));
+      
+      // Para cada slot seleccionado, ver qué otros bloquea
+      selectedSlots.forEach(slot => {
+        const slotStart = timeToMinutes(slot.time);
+        const slotEnd = slotStart + (parseInt(slot.duration) || DEFAULT_DURATION);
+        
+        defaultTimeSlots.forEach(otherTime => {
+          if (selectedTimes.has(otherTime)) return; // No bloquear los seleccionados
+          
+          const otherStart = timeToMinutes(otherTime);
+          const otherEnd = otherStart + 30; // Asumimos 30 min como mínimo para check
+          
+          if (rangesOverlap(slotStart, slotEnd, otherStart, otherEnd)) {
+            blocked.add(otherTime);
+          }
+        });
+      });
+      
+      return blocked;
+    }
+
+    // Verificar si un horario específico está disponible considerando duraciones
+    function isTimeAvailable(date, time, modality, excludeId = null) {
+      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+      const config = getDayConfig(date);
+      const slots = config[modality]?.slots || [];
+      
+      // Encontrar el slot solicitado
+      const targetSlot = slots.find(s => s.time === time);
+      if (!targetSlot) return false;
+      
+      const targetStart = timeToMinutes(time);
+      const targetEnd = targetStart + (parseInt(targetSlot.duration) || DEFAULT_DURATION);
+      
+      // Verificar contra turnos ya reservados
+      for (const booked of bookedSlots) {
+        if (booked.appointment_date !== dateStr) continue;
+        if (booked.modality !== modality) continue; // Diferentes modalidades no se solapan (son físicamente separadas)
+        if (booked.id === excludeId) continue;
+        
+        // Obtener duración del turno reservado
+        const bookedStart = timeToMinutes(booked.appointment_time);
+        const bookedDuration = booked.duration || DEFAULT_DURATION;
+        const bookedEnd = bookedStart + bookedDuration;
+        
+        if (rangesOverlap(targetStart, targetEnd, bookedStart, bookedEnd)) {
+          return false; // Se solapa con un turno reservado
+        }
+      }
+      
+      return true;
+    }
+
+    // ==================== CARGA DE DATOS ====================
+
     async function loadAvailability() {
       try {
         const { data, error } = await supabaseClient
@@ -860,7 +948,6 @@
         
         dayAvailability = {};
         data.forEach(day => {
-          // Migración: convertir formato antiguo (array de strings) al nuevo (array de objetos)
           dayAvailability[day.date] = {
             virtual: normalizeSlots(day.virtual),
             presencial: normalizeSlots(day.presencial)
@@ -871,11 +958,9 @@
       }
     }
 
-    // NUEVO: Normalizar slots para compatibilidad con datos antiguos
     function normalizeSlots(modalityData) {
       if (!modalityData) return { available: false, slots: [] };
       
-      // Si es el formato nuevo (tiene slots array)
       if (modalityData.slots && Array.isArray(modalityData.slots)) {
         return {
           available: modalityData.available || false,
@@ -887,7 +972,6 @@
         };
       }
       
-      // Si es el formato antiguo (times array de strings)
       if (modalityData.times && Array.isArray(modalityData.times)) {
         return {
           available: modalityData.available || false,
@@ -902,7 +986,6 @@
       return { available: false, slots: [], address: '' };
     }
 
-    // Verificar si un día tiene disponibilidad para una modalidad específica
     function isDayAvailable(date, modality) {
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
       const config = dayAvailability[dateStr];
@@ -910,7 +993,6 @@
       return config[modality].available && config[modality].slots.length > 0;
     }
 
-    // Obtener configuración de un día
     function getDayConfig(date) {
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
       return dayAvailability[dateStr] || { 
@@ -919,24 +1001,12 @@
       };
     }
 
-    // NUEVO: Obtener duración de un slot específico
     function getSlotDuration(date, time, modality) {
       const config = getDayConfig(date);
       const slot = config[modality]?.slots.find(s => s.time === time);
       return slot ? slot.duration : DEFAULT_DURATION;
     }
 
-    // Verificar si un slot está reservado
-    function isSlotBooked(date, time, excludeId = null) {
-      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
-      return bookedSlots.some(slot => 
-        slot.appointment_date === dateStr && 
-        slot.appointment_time === time &&
-        slot.id !== excludeId
-      );
-    }
-
-    // Cargar turnos reservados
     async function loadBookedSlots() {
       try {
         const { data, error } = await supabaseClient
@@ -954,7 +1024,8 @@
       }
     }
 
-    // Funciones de selección de modalidad y pasos
+    // ==================== FLUJO DE RESERVA ====================
+
     function selectModality(modality) {
       selectedModality = modality;
       selectedDate = null;
@@ -1015,7 +1086,6 @@
       currentStep = step;
     }
 
-    // Funciones del calendario de pacientes
     async function renderCalendar() {
       await loadAvailability();
       await loadBookedSlots();
@@ -1045,25 +1115,23 @@
         const hasVirtual = dayConfig.virtual.available && dayConfig.virtual.slots.length > 0;
         const hasPresencial = dayConfig.presencial.available && dayConfig.presencial.slots.length > 0;
         
-        // Contar slots disponibles para la modalidad seleccionada
         let availableSlots = 0;
         let totalSlots = 0;
         
         if (selectedModality === 'virtual' && hasVirtual) {
           totalSlots = dayConfig.virtual.slots.length;
           dayConfig.virtual.slots.forEach(slot => {
-            if (!isSlotBooked(dateStr, slot.time)) availableSlots++;
+            if (isTimeAvailable(date, slot.time, 'virtual')) availableSlots++;
           });
         } else if (selectedModality === 'presencial' && hasPresencial) {
           totalSlots = dayConfig.presencial.slots.length;
           dayConfig.presencial.slots.forEach(slot => {
-            if (!isSlotBooked(dateStr, slot.time)) availableSlots++;
+            if (isTimeAvailable(date, slot.time, 'presencial')) availableSlots++;
           });
         }
 
         let classes = 'calendar-day p-3 rounded-lg text-center cursor-pointer text-sm ';
         
-        // Determinar estilo visual según disponibilidad
         if (isSelected) {
           classes += 'selected ';
         } else if (isPast) {
@@ -1109,7 +1177,6 @@
       updateStep2Button();
     }
 
-    // NUEVO: Renderizar time slots con duración visible
     function renderTimeSlots() {
       const container = document.getElementById('time-slots-container');
       const locationInfo = document.getElementById('location-info');
@@ -1123,8 +1190,6 @@
 
       const dateStr = selectedDate.toISOString().split('T')[0];
       const dayConfig = getDayConfig(selectedDate);
-      
-      // Verificar si hay disponibilidad para la modalidad seleccionada
       const modalityConfig = dayConfig[selectedModality];
       
       if (!modalityConfig.available || modalityConfig.slots.length === 0) {
@@ -1134,9 +1199,15 @@
       }
 
       let html = '<div class="grid grid-cols-1 gap-2">';
-      modalityConfig.slots.forEach(slot => {
+      
+      // Ordenar slots por hora
+      const sortedSlots = [...modalityConfig.slots].sort((a, b) => 
+        timeToMinutes(a.time) - timeToMinutes(b.time)
+      );
+      
+      sortedSlots.forEach(slot => {
         const isSelected = selectedTime === slot.time;
-        const isBooked = isSlotBooked(dateStr, slot.time);
+        const isBooked = !isTimeAvailable(selectedDate, slot.time, selectedModality);
         
         let classes = 'time-slot p-3 rounded-xl border text-left text-sm font-medium flex justify-between items-center ';
         if (isBooked) {
@@ -1163,7 +1234,6 @@
 
       container.innerHTML = html;
 
-      // Mostrar dirección si es presencial
       if (selectedModality === 'presencial' && modalityConfig.address) {
         selectedLocation.textContent = modalityConfig.address;
         locationInfo.classList.remove('hidden');
@@ -1172,7 +1242,6 @@
       }
     }
 
-    // NUEVO: Modificar selectTime para guardar también la duración
     function selectTime(time, duration) {
       selectedTime = time;
       selectedDuration = duration || DEFAULT_DURATION;
@@ -1189,7 +1258,6 @@
       }
     }
 
-    // NUEVO: Actualizar confirmación incluyendo duración
     function updateConfirmation() {
       document.getElementById('confirm-modality').textContent = selectedModality === 'virtual' ? 'Virtual' : 'Presencial';
 
@@ -1203,7 +1271,6 @@
       document.getElementById('confirm-date').textContent = dateStr;
       document.getElementById('confirm-time').textContent = selectedTime + ' hs';
       
-      // Mostrar duración
       const duration = selectedDuration || getSlotDuration(selectedDate, selectedTime, selectedModality);
       document.getElementById('confirm-duration').textContent = `${duration} minutos`;
 
@@ -1220,7 +1287,6 @@
       }
     }
 
-    // NUEVO: Modificar submitBooking para incluir duración
     async function submitBooking() {
       const form = document.getElementById('bookingForm');
       if (!form.checkValidity()) {
@@ -1228,8 +1294,11 @@
         return;
       }
 
-      if (isSlotBooked(selectedDate, selectedTime)) {
-        alert('Lo sentimos, este turno acaba de ser reservado por otra persona. Por favor selecciona otro horario.');
+      const slotDuration = getSlotDuration(selectedDate, selectedTime, selectedModality);
+      
+      // Verificar solapamiento justo antes de reservar
+      if (!isTimeAvailable(selectedDate, selectedTime, selectedModality)) {
+        alert('Lo sentimos, este turno acaba de ser reservado por otra persona o se solapa con otro turno. Por favor selecciona otro horario.');
         renderTimeSlots();
         return;
       }
@@ -1241,7 +1310,6 @@
       btn.innerHTML = 'Enviando... <i class="fas fa-spinner fa-spin ml-2"></i>';
 
       const dayConfig = getDayConfig(selectedDate);
-      const slotDuration = getSlotDuration(selectedDate, selectedTime, selectedModality);
 
       const appointmentData = {
         full_name: document.getElementById('fullName').value.trim(),
@@ -1251,7 +1319,7 @@
         modality: selectedModality,
         appointment_date: selectedDate.toISOString().split('T')[0],
         appointment_time: selectedTime,
-        duration: slotDuration, // NUEVO: Guardar duración
+        duration: slotDuration,
         status: 'pending'
       };
 
@@ -1273,7 +1341,6 @@
           return;
         }
 
-        // Enviar notificación por email
         const emailData = {
           _subject: `Nuevo turno: ${appointmentData.full_name} - ${appointmentData.appointment_date}`,
           Nombre: appointmentData.full_name,
@@ -1345,7 +1412,8 @@
       document.getElementById('time-slots-container').innerHTML = '<p class="text-gray-400 text-sm italic">Seleccioná una fecha primero</p>';
     }
 
-    // ADMIN FUNCTIONS
+    // ==================== ADMINISTRACIÓN ====================
+
     function toggleAdmin() {
       const adminSection = document.getElementById('admin-section');
       if (adminSection.classList.contains('hidden')) {
@@ -1381,7 +1449,6 @@
       document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
     }
 
-    // NUEVO: Mostrar duración en la lista de turnos
     async function loadAppointments() {
       const container = document.getElementById('appointments-list');
       container.innerHTML = '<p class="text-gray-400 text-center py-8">Cargando turnos...</p>';
@@ -1412,15 +1479,15 @@
             month: 'short'
           });
           
-          // NUEVO: Mostrar duración si existe
           const durationBadge = apt.duration ? `<span class="ml-2 px-2 py-1 rounded text-xs bg-gray-200 text-gray-700">${apt.duration} min</span>` : '';
+          const endTime = minutesToTime(timeToMinutes(apt.appointment_time) + (apt.duration || DEFAULT_DURATION));
           
           html += `
             <div class="appointment-card p-4 rounded-lg flex justify-between items-center">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
                   <span class="font-semibold text-gray-800">${dateStr}</span>
-                  <span class="text-gray-600">${apt.appointment_time} hs</span>
+                  <span class="text-gray-600">${apt.appointment_time} - ${endTime} hs</span>
                   ${durationBadge}
                   <span class="px-2 py-1 rounded text-xs ${apt.modality === 'virtual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
                     ${apt.modality === 'virtual' ? 'Virtual' : 'Presencial'}
@@ -1448,7 +1515,6 @@
       }
     }
 
-    // Calendario de administración
     async function renderAdminCalendar() {
       await loadAvailability();
       
@@ -1474,7 +1540,6 @@
         let classes = 'admin-calendar-day p-2 rounded-lg text-center ';
         let content = `<div class="font-semibold mb-1">${day}</div>`;
         
-        // Determinar clase según qué modalidades tiene
         if (hasVirtual && hasPresencial) {
           classes += 'has-both ';
           content += `<div class="text-xs text-purple-700 font-semibold">Ambas</div>`;
@@ -1503,7 +1568,6 @@
       document.getElementById('day-config-panel').classList.add('hidden');
     }
 
-    // NUEVO: Modificar selectAdminDay para trabajar con slots
     function selectAdminDay(year, month, day) {
       selectedConfigDate = new Date(year, month, day);
       const dateStr = selectedConfigDate.toISOString().split('T')[0];
@@ -1512,20 +1576,18 @@
       document.getElementById('selected-day-title').textContent = 
         `Configurar: ${selectedConfigDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`;
       
-      // Cargar configuración VIRTUAL
       document.getElementById('virtual-available').checked = dayConfig.virtual.available;
       renderTimeSlotsConfig('virtual', dayConfig.virtual.slots);
       
-      // Cargar configuración PRESENCIAL
       document.getElementById('presencial-available').checked = dayConfig.presencial.available;
       document.getElementById('presencial-address').value = dayConfig.presencial.address || '';
       renderTimeSlotsConfig('presencial', dayConfig.presencial.slots);
       
-      // Mostrar/ocultar secciones según estado
       toggleModalitySection('virtual');
       toggleModalitySection('presencial');
       
       document.getElementById('day-config-panel').classList.remove('hidden');
+      document.getElementById('conflict-warning').classList.add('hidden');
     }
 
     function closeDayConfig() {
@@ -1544,52 +1606,132 @@
       }
     }
 
-    // NUEVO: Renderizar slots de tiempo con input de duración
+    // ==================== CONFIGURACIÓN DE SLOTS CON SOLAPAMIENTO ====================
+
     function renderTimeSlotsConfig(modality, selectedSlots = []) {
       const container = document.getElementById(`${modality}-time-slots`);
       container.innerHTML = '';
       
-      // Crear mapa de slots seleccionados para fácil acceso
       const selectedMap = {};
       selectedSlots.forEach(slot => {
         selectedMap[slot.time] = slot.duration || DEFAULT_DURATION;
       });
       
+      // Calcular cuáles están bloqueados por solapamiento
+      const activeSlots = Object.keys(selectedMap).map(time => ({
+        time,
+        duration: selectedMap[time]
+      }));
+      const blocked = calculateBlockedSlots(activeSlots);
+      
       defaultTimeSlots.forEach(time => {
         const isSelected = selectedMap.hasOwnProperty(time);
+        const isBlocked = blocked.has(time);
         const duration = selectedMap[time] || DEFAULT_DURATION;
         
         const div = document.createElement('div');
-        div.className = 'time-slot-config';
-        div.innerHTML = `
-          <input type="checkbox" id="${modality}-time-${time}" value="${time}" ${isSelected ? 'checked' : ''} 
-            class="w-4 h-4 text-gray-800 focus:ring-gray-800 rounded" onchange="toggleDurationInput('${modality}', '${time}')">
-          <span class="time-display">${time}</span>
-          <div class="flex items-center gap-1 ml-auto" id="duration-wrapper-${modality}-${time}" style="${isSelected ? '' : 'opacity: 0.5; pointer-events: none;'}">
-            <input type="number" id="${modality}-duration-${time}" value="${duration}" min="15" max="180" step="5"
-              class="duration-input" title="Duración en minutos" onchange="validateDuration(this)">
-            <span class="text-xs text-gray-500">min</span>
-          </div>
-        `;
+        
+        if (isSelected) {
+          div.className = 'time-slot-config selected-slot';
+          div.innerHTML = `
+            <input type="checkbox" id="${modality}-time-${time}" value="${time}" checked 
+              class="w-4 h-4 text-gray-800 focus:ring-gray-800 rounded" 
+              onchange="updateAdminSlots('${modality}')">
+            <span class="time-display font-semibold">${time}</span>
+            <div class="flex items-center gap-1 ml-auto">
+              <input type="number" id="${modality}-duration-${time}" value="${duration}" min="15" max="180" step="5"
+                class="duration-input" title="Duración en minutos" 
+                onchange="validateDuration(this); updateAdminSlots('${modality}')">
+              <span class="text-xs text-gray-500">min</span>
+            </div>
+          `;
+        } else if (isBlocked) {
+          div.className = 'time-slot-config blocked-by-other';
+          div.innerHTML = `
+            <input type="checkbox" disabled class="w-4 h-4 rounded opacity-50">
+            <span class="time-display opacity-50">${time}</span>
+            <span class="text-xs text-amber-700 ml-auto italic">
+              <i class="fas fa-lock mr-1"></i>Bloqueado
+            </span>
+          `;
+        } else {
+          div.className = 'time-slot-config';
+          div.innerHTML = `
+            <input type="checkbox" id="${modality}-time-${time}" value="${time}" 
+              class="w-4 h-4 text-gray-800 focus:ring-gray-800 rounded" 
+              onchange="updateAdminSlots('${modality}')">
+            <span class="time-display">${time}</span>
+            <div class="flex items-center gap-1 ml-auto opacity-50 pointer-events-none" id="duration-wrapper-${modality}-${time}">
+              <input type="number" id="${modality}-duration-${time}" value="${DEFAULT_DURATION}" min="15" max="180" step="5"
+                class="duration-input" disabled>
+              <span class="text-xs text-gray-500">min</span>
+            </div>
+          `;
+        }
+        
         container.appendChild(div);
       });
+      
+      // Mostrar advertencias de solapamiento
+      updateOverlapWarnings(modality, activeSlots, blocked);
     }
 
-    // NUEVO: Toggle del input de duración según checkbox
-    function toggleDurationInput(modality, time) {
-      const checkbox = document.getElementById(`${modality}-time-${time}`);
-      const wrapper = document.getElementById(`duration-wrapper-${modality}-${time}`);
+    function updateAdminSlots(modality) {
+      // Recolectar slots seleccionados
+      const selectedSlots = [];
+      defaultTimeSlots.forEach(time => {
+        const checkbox = document.getElementById(`${modality}-time-${time}`);
+        if (checkbox && checkbox.checked) {
+          const durationInput = document.getElementById(`${modality}-duration-${time}`);
+          selectedSlots.push({
+            time,
+            duration: parseInt(durationInput?.value) || DEFAULT_DURATION
+          });
+        }
+      });
       
-      if (checkbox.checked) {
-        wrapper.style.opacity = '1';
-        wrapper.style.pointerEvents = 'auto';
+      // Verificar conflictos entre los seleccionados
+      const conflicts = findConflicts(selectedSlots);
+      
+      if (conflicts.length > 0) {
+        document.getElementById('conflict-warning').classList.remove('hidden');
+        document.getElementById('conflict-text').textContent = 
+          `¡Atención! Hay conflictos de horario: ${conflicts.join(', ')}`;
       } else {
-        wrapper.style.opacity = '0.5';
-        wrapper.style.pointerEvents = 'none';
+        document.getElementById('conflict-warning').classList.add('hidden');
+      }
+      
+      // Re-renderizar para mostrar bloqueos
+      renderTimeSlotsConfig(modality, selectedSlots);
+    }
+
+    function findConflicts(slots) {
+      const conflicts = [];
+      for (let i = 0; i < slots.length; i++) {
+        for (let j = i + 1; j < slots.length; j++) {
+          const start1 = timeToMinutes(slots[i].time);
+          const end1 = start1 + slots[i].duration;
+          const start2 = timeToMinutes(slots[j].time);
+          const end2 = start2 + slots[j].duration;
+          
+          if (rangesOverlap(start1, end1, start2, end2)) {
+            conflicts.push(`${slots[i].time} y ${slots[j].time}`);
+          }
+        }
+      }
+      return conflicts;
+    }
+
+    function updateOverlapWarnings(modality, activeSlots, blocked) {
+      const warningDiv = document.getElementById(`${modality}-overlaps`);
+      if (blocked.size > 0) {
+        const blockedList = Array.from(blocked).sort().join(', ');
+        warningDiv.innerHTML = `<i class="fas fa-info-circle mr-1"></i> Horarios bloqueados por solapamiento: ${blockedList}`;
+      } else {
+        warningDiv.innerHTML = '';
       }
     }
 
-    // NUEVO: Validar duración
     function validateDuration(input) {
       let value = parseInt(input.value);
       if (isNaN(value) || value < 15) {
@@ -1599,7 +1741,6 @@
       }
     }
 
-    // NUEVO: Modificar saveDayConfig para guardar slots con duración
     async function saveDayConfig() {
       if (!selectedConfigDate) return;
       
@@ -1639,7 +1780,15 @@
         });
       }
       
-      // Validaciones
+      // Validar conflictos antes de guardar
+      const virtualConflicts = virtualAvailable ? findConflicts(virtualSlots) : [];
+      const presencialConflicts = presencialAvailable ? findConflicts(presencialSlots) : [];
+      
+      if (virtualConflicts.length > 0 || presencialConflicts.length > 0) {
+        alert('No se puede guardar: hay horarios que se solapan entre sí. Por favor ajustá las duraciones o deseleccioná los horarios conflictivos.');
+        return;
+      }
+      
       if (virtualAvailable && virtualSlots.length === 0) {
         alert('Si activás la modalidad Virtual, debés seleccionar al menos un horario.');
         return;
@@ -1655,7 +1804,6 @@
         return;
       }
       
-      // Si ninguna está activa, eliminar el registro
       if (!virtualAvailable && !presencialAvailable) {
         await deleteDayConfig();
         return;
@@ -1683,7 +1831,6 @@
           return;
         }
         
-        // Actualizar estado local
         dayAvailability[dateStr] = {
           virtual: { available: virtualAvailable, slots: virtualSlots },
           presencial: { available: presencialAvailable, slots: presencialSlots, address: presencialAddress }
@@ -1697,7 +1844,6 @@
       }
     }
 
-    // Eliminar configuración de un día
     async function deleteDayConfig() {
       if (!selectedConfigDate) return;
       
@@ -1726,7 +1872,8 @@
       }
     }
 
-    // NUEVO: Modificar openEditModal para mostrar duración
+    // ==================== EDICIÓN DE TURNOS ====================
+
     async function openEditModal(appointmentId) {
       const { data, error } = await supabaseClient
         .from('appointments')
@@ -1747,12 +1894,12 @@
       
       await updateEditTimeSlots(data.appointment_date, data.modality, data.appointment_time);
       
-      // NUEVO: Mostrar duración actual
       const durationDisplay = document.getElementById('edit-duration-display');
       const durationText = document.getElementById('edit-duration-text');
       if (data.duration) {
         durationDisplay.classList.remove('hidden');
-        durationText.textContent = `${data.duration} minutos`;
+        const endTime = minutesToTime(timeToMinutes(data.appointment_time) + data.duration);
+        durationText.textContent = `${data.duration} minutos (hasta ${endTime} hs)`;
       } else {
         durationDisplay.classList.add('hidden');
       }
@@ -1765,7 +1912,6 @@
       editingAppointment = null;
     }
 
-    // NUEVO: Modificar updateEditTimeSlots para trabajar con slots
     async function updateEditTimeSlots(dateStr, modality, currentTime) {
       const date = new Date(dateStr);
       const dayConfig = getDayConfig(date);
@@ -1777,28 +1923,36 @@
       if (dayConfig[modality] && dayConfig[modality].available && dayConfig[modality].slots.length > 0) {
         slots = dayConfig[modality].slots;
       } else {
-        // Si no hay configuración, usar slots por defecto
         slots = defaultTimeSlots.map(t => ({ time: t, duration: DEFAULT_DURATION }));
       }
       
-      slots.forEach(slot => {
-        const isBooked = isSlotBooked(dateStr, slot.time, editingAppointment?.id);
+      // Ordenar por hora
+      slots.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+      
+      for (const slot of slots) {
+        const isAvailable = isTimeAvailable(date, slot.time, modality, editingAppointment?.id);
         const isCurrent = slot.time === currentTime;
         
         const option = document.createElement('option');
         option.value = slot.time;
-        option.textContent = `${slot.time} (${slot.duration} min)` + (isBooked ? ' - Ocupado' : '') + (isCurrent ? ' - Actual' : '');
         
-        if (isBooked && !isCurrent) {
+        const endTime = minutesToTime(timeToMinutes(slot.time) + slot.duration);
+        let text = `${slot.time} - ${endTime} (${slot.duration} min)`;
+        
+        if (!isAvailable && !isCurrent) {
+          text += ' [OCUPADO]';
           option.disabled = true;
           option.style.color = '#999';
         } else if (isCurrent) {
+          text += ' [ACTUAL]';
           option.selected = true;
           option.style.fontWeight = 'bold';
+          option.style.color = '#059669';
         }
         
+        option.textContent = text;
         select.appendChild(option);
-      });
+      }
     }
 
     document.getElementById('edit-date')?.addEventListener('change', async function() {
@@ -1813,7 +1967,6 @@
       await updateEditTimeSlots(date, this.value, null);
     });
 
-    // NUEVO: Modificar saveEdit para incluir duración
     async function saveEdit() {
       if (!editingAppointment) return;
       
@@ -1826,14 +1979,12 @@
         return;
       }
       
-      if (isSlotBooked(newDate, newTime, editingAppointment.id)) {
-        alert('Ese horario ya está reservado por otro paciente');
+      if (!isTimeAvailable(newDate, newTime, newModality, editingAppointment.id)) {
+        alert('Ese horario ya está reservado por otro paciente o se solapa con otro turno');
         return;
       }
       
-      // Obtener la duración del nuevo slot seleccionado
-      const dayConfig = getDayConfig(newDate);
-      const newSlot = dayConfig[newModality]?.slots?.find(s => s.time === newTime);
+      const newSlot = getDayConfig(newDate)[newModality]?.slots?.find(s => s.time === newTime);
       const newDuration = newSlot ? newSlot.duration : DEFAULT_DURATION;
       
       try {
@@ -1843,7 +1994,7 @@
             modality: newModality,
             appointment_date: newDate,
             appointment_time: newTime,
-            duration: newDuration // Actualizar duración según configuración del nuevo horario
+            duration: newDuration
           })
           .eq('id', editingAppointment.id);
         
@@ -1852,6 +2003,7 @@
           return;
         }
         
+        const dayConfig = getDayConfig(newDate);
         const address = newModality === 'presencial' ? (dayConfig.presencial.address || 'Consultorio') : 'Virtual (videollamada)';
         
         const emailData = {
